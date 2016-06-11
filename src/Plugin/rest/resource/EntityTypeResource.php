@@ -6,6 +6,7 @@ use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\hydrant\Plugin\rest\EntityTypeResourceBase;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\ResourceResponse;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * )
  */
 class EntityTypeResource extends EntityTypeResourceBase {
+
+  use StringTranslationTrait;
 
   /**
    * The entity field manager.
@@ -97,7 +100,7 @@ class EntityTypeResource extends EntityTypeResourceBase {
   protected function getEntityTypeInfo($entity_type_id) {
     // @todo Load entity type in route system?
     if (!$this->entityTypeManager->hasDefinition($entity_type_id)) {
-      throw new NotFoundHttpException();
+      throw new NotFoundHttpException($this->t('No entity type found: @type', ['@type' => $entity_type_id]));
     }
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
 
