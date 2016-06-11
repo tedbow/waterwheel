@@ -1,0 +1,5 @@
+
+view site configuration:
+  title: 'View site configuration'
+  description: 'Allow access to read but not update all site configuration.'
+  restrict access: true

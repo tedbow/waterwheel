@@ -1,0 +1,7 @@
+name: hydrant
+type: module
+description: Connector module for the Hydrant Javascript Library
+core: 8.x
+package: Hydrant
+dependencies:
+  - rest
