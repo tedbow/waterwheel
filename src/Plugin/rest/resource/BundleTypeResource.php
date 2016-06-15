@@ -6,10 +6,8 @@ namespace Drupal\waterwheel\Plugin\rest\resource;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\ResourceResponse;
 use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
@@ -38,6 +36,7 @@ class BundleTypeResource extends EntityTypeResourceBase {
    * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
   protected $fieldManager;
+
   /**
    * EntityTypeResource constructor.
    *
@@ -78,23 +77,26 @@ class BundleTypeResource extends EntityTypeResourceBase {
    *
    * Returns a list of bundles for specified entity.
    *
-   * @param $entity_type_id
+   * @param string $entity_type_id
    *   The entity type id for the request.
    *
-   * @return \Drupal\rest\ResourceResponse Throws exception expected.
+   * @param string $bundle_name
+   *   The bundle machine name.
+   *
+   * @return \Drupal\rest\ResourceResponse
+   *
    * Throws exception expected.
    */
   public function get($entity_type_id, $bundle_name) {
     parent::checkAccess();
-
     return new ResourceResponse($this->getBundleInfo($entity_type_id, $bundle_name));
   }
 
   /**
    * Gets information about the bundle.
    *
-   * @param $entity_type_id
-   * @param $bundle_name
+   * @param string $entity_type_id
+   * @param string $bundle_name
    *
    * @return mixed
    */
@@ -118,8 +120,8 @@ class BundleTypeResource extends EntityTypeResourceBase {
   /**
    * Gets information on all the fields on the bundle.
    *
-   * @param $entity_type_id
-   * @param $bundle_name
+   * @param string $entity_type_id
+   * @param string $bundle_name
    *
    * @return array
    */
@@ -137,17 +139,14 @@ class BundleTypeResource extends EntityTypeResourceBase {
         'readonly' => $field_definition->isReadOnly(),
         'cardinality' => $field_definition->getFieldStorageDefinition()->getCardinality(),
         'settings' => $field_definition->getSettings(),
-        //'help' => $field_definition->get
       ];
       if ($this->isReferenceField($field_definition)) {
         $field_info['is_reference']  = TRUE;
+        // @todo Pull reference entity type and bundles out of settings for easier access?
       }
       else {
         $field_info['is_reference']  = FALSE;
       }
-     // $field_definition->getFieldStorageDefinition()->getProvider();
-
-      //FieldStorageConfig::load($field_definition->getType());
       $fields[$field_name] = $field_info;
     }
     return $fields;
@@ -161,13 +160,14 @@ class BundleTypeResource extends EntityTypeResourceBase {
    * @return bool
    */
   protected function isReferenceField(FieldDefinitionInterface $field_definition) {
-
+    // @todo Is there an easier to check if field is reference
+    // @todo Dependency injection
     /** @var \Drupal\Core\Field\FieldTypePluginManagerInterface $field_manager */
     $field_manager = \Drupal::getContainer()->get('plugin.manager.field.field_type');
     $plugin_definition = $field_manager->getDefinition($field_definition->getType());
     $class = $plugin_definition['class'];
     $reference_class = 'Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem';
-    if (is_subclass_of($class,$reference_class) || $class == $reference_class) {
+    if (is_subclass_of($class, $reference_class) || $class == $reference_class) {
       return TRUE;
     }
     return FALSE;

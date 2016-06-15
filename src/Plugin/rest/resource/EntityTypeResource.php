@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
+ * @todo Can the resource be removed?
  * Provides a resource to get information about an entity type.
  *
  * @RestResource(
