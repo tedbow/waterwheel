@@ -43,6 +43,10 @@ class EntityTypesListResource extends EntityTypeResourceBase {
     $route = $bundle_resource->routes()->getIterator()->current();
     $path = $route->getPath();
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
+      $methods = $this->getEntityMethods($entity_type_id);
+      if (empty($methods)) {
+        continue;
+      }
       $type_infos[$entity_type_id] = [
         'label' => $entity_type->getLabel(),
         'type' => $this->getMetaEntityType($entity_type),
