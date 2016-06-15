@@ -1,4 +1,4 @@
-This module is used the Hydrant Javascript Library to retrieve information from
+This module is used the Waterwheel Javascript Library to retrieve information from
 Drupal that is not provide by core.
 
 Current resources

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\hydrant\Plugin\rest;
+namespace Drupal\waterwheel\Plugin\rest;
 
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\Entity\ContentEntityTypeInterface;
@@ -73,7 +73,7 @@ abstract class EntityTypeResourceBase extends ResourceBase {
       $plugin_id,
       $plugin_definition,
       $container->getParameter('serializer.formats'),
-      $container->get('logger.factory')->get('hydrant'),
+      $container->get('logger.factory')->get('waterwheel'),
       $container->get('current_user'),
       $container->get('entity_type.manager'),
       $container->get('plugin.manager.rest')

@@ -1,14 +1,14 @@
 {
-  "name": "drupal/hydrant",
+  "name": "drupal/waterwheel",
   "type": "drupal-module",
-  "description": "Connector module for the Hydrant Javascript Library",
+  "description": "Connector module for the Waterwheel Javascript Library",
   "keywords": ["Drupal"],
   "license": "GPL-2.0+",
-  "homepage": "https://www.drupal.org/project/hydrant",
+  "homepage": "https://www.drupal.org/project/waterwheel",
   "minimum-stability": "dev",
   "support": {
-    "issues": "http://drupal.org/project/issues/hydrant",
-    "source": "http://cgit.drupalcode.org/hydrant"
+    "issues": "http://drupal.org/project/issues/waterwheel",
+    "source": "http://cgit.drupalcode.org/waterwheel"
   },
   "require": { }
 }

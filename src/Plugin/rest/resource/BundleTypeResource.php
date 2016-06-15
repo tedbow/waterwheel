@@ -2,30 +2,33 @@
 
 namespace Drupal\waterwheel\Plugin\rest\resource;
 
-use Drupal\Core\Entity\ContentEntityTypeInterface;
+
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\ResourceResponse;
+use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Provides a resource to get information about an entity type.
+ * Provides a resource to get information about an bundle type.
  *
  * @RestResource(
- *   id = "entity_type_resource",
- *   label = @Translation("Entity type resource"),
+ *   id = "bundle_type_resource",
+ *   label = @Translation("Bundle type resource"),
  *   uri_paths = {
- *     "canonical" = "/entity/types/{entity_type}"
+ *     "canonical" = "/entity/types/{entity_type}/{bundle}"
  *   }
  * )
  */
-class EntityTypeResource extends EntityTypeResourceBase {
+class BundleTypeResource extends EntityTypeResourceBase {
 
   use StringTranslationTrait;
 
@@ -35,7 +38,6 @@ class EntityTypeResource extends EntityTypeResourceBase {
    * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
   protected $fieldManager;
-
   /**
    * EntityTypeResource constructor.
    *
@@ -82,96 +84,93 @@ class EntityTypeResource extends EntityTypeResourceBase {
    * @return \Drupal\rest\ResourceResponse Throws exception expected.
    * Throws exception expected.
    */
-  public function get($entity_type_id) {
+  public function get($entity_type_id, $bundle_name) {
     parent::checkAccess();
 
-    return new ResourceResponse($this->getEntityTypeInfo($entity_type_id));
+    return new ResourceResponse($this->getBundleInfo($entity_type_id, $bundle_name));
   }
 
   /**
-   * Gets the type information for an entity type.
+   * Gets information about the bundle.
    *
-   * @param string $entity_type_id
-   *   The entity type id for the entity to get information for.
+   * @param $entity_type_id
+   * @param $bundle_name
    *
-   * @return array
-   *   The entity type info.
+   * @return mixed
    */
-  protected function getEntityTypeInfo($entity_type_id) {
+  protected function getBundleInfo($entity_type_id, $bundle_name) {
     // @todo Load entity type in route system?
     if (!$this->entityTypeManager->hasDefinition($entity_type_id)) {
       throw new NotFoundHttpException($this->t('No entity type found: @type', ['@type' => $entity_type_id]));
     }
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
-
-    $info = [
-      'label' => $entity_type->getLabel(),
-      'type' => $this->getMetaEntityType($entity_type),
-    ];
-
-    $info['methods'] = $this->getEntityMethods($entity_type_id);
-    if ($entity_type instanceof ContentEntityTypeInterface) {
-      $info['fields'] = $this->getFields($entity_type_id);
+    if ($bundle_entity_type_id = $entity_type->getBundleEntityType()) {
+      $bundle = $this->entityTypeManager->getStorage($bundle_entity_type_id)->load($bundle_name);
+      $bundle_info['label'] = $bundle->label();
+      $bundle_info['fields'] = $this->getBundleFields($entity_type_id, $bundle_name);
+      return $bundle_info;
     }
-    return $info;
+    else {
+      throw new NotFoundHttpException($this->t('Entity type <em>@type</em> does not support bundles.', ['@type' => $entity_type_id]));
+    }
   }
 
   /**
-   * Gets the REST methods and their paths for the entity type.
+   * Gets information on all the fields on the bundle.
    *
-   * @param string $entity_type_id
-   *   The entity type id.
-   *
-   * @return array
-   *   The REST methods.
-   *
-   *   The keys are the REST methods and the values are the paths.
-   */
-  protected function getEntityMethods($entity_type_id) {
-    /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $entity_resource */
-    $entity_resource = $this->resourceManager->createInstance("entity:$entity_type_id");
-    $methods = $entity_resource->availableMethods();
-    /** @var \Symfony\Component\Routing\RouteCollection $routes */
-    $routes = $entity_resource->routes();
-    $resource_methods = [];
-    foreach ($methods as $method) {
-      /** @var \Symfony\Component\Routing\Route $route */
-      foreach ($routes as $route) {
-        if (in_array($method, $route->getMethods())) {
-          $resource_methods[$method] = $route->getPath();
-          break;
-        }
-      }
-    }
-
-    return $resource_methods;
-  }
-
-  /**
-   * Gets the information about fields for the entity type.
-   *
-   * //@ todo currently it only retrieves the base fields. Should it get user configurable fields.
-   *
-   * @param string $entity_type_id
-   *   The entity type containing the fields.
+   * @param $entity_type_id
+   * @param $bundle_name
    *
    * @return array
-   *   The fields.
    */
-  protected function getFields($entity_type_id) {
+  protected function getBundleFields($entity_type_id, $bundle_name) {
     $fields = [];
-    $field_definitions = $this->fieldManager->getBaseFieldDefinitions($entity_type_id);
-
+    $field_definitions = $this->fieldManager->getFieldDefinitions($entity_type_id, $bundle_name);
     foreach ($field_definitions as $field_name => $field_definition) {
-      $fields[$field_name] = [
+      $field_type = $field_definition->getType();
+
+      $field_info = [
         'label' => $field_definition->getLabel(),
-        'type' => $field_definition->getType(),
+        'type' => $field_type,
+        'data_type' => $field_definition->getDataType(),
         'required' => $field_definition->isRequired(),
         'readonly' => $field_definition->isReadOnly(),
         'cardinality' => $field_definition->getFieldStorageDefinition()->getCardinality(),
+        'settings' => $field_definition->getSettings(),
+        //'help' => $field_definition->get
       ];
+      if ($this->isReferenceField($field_definition)) {
+        $field_info['is_reference']  = TRUE;
+      }
+      else {
+        $field_info['is_reference']  = FALSE;
+      }
+     // $field_definition->getFieldStorageDefinition()->getProvider();
+
+      //FieldStorageConfig::load($field_definition->getType());
+      $fields[$field_name] = $field_info;
     }
     return $fields;
+  }
+
+  /**
+   * Determines if a field is a reference type field.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   *
+   * @return bool
+   */
+  protected function isReferenceField(FieldDefinitionInterface $field_definition) {
+
+    /** @var \Drupal\Core\Field\FieldTypePluginManagerInterface $field_manager */
+    $field_manager = \Drupal::getContainer()->get('plugin.manager.field.field_type');
+    $plugin_definition = $field_manager->getDefinition($field_definition->getType());
+    $class = $plugin_definition['class'];
+    $reference_class = 'Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem';
+    if (is_subclass_of($class,$reference_class) || $class == $reference_class) {
+      return TRUE;
+    }
+    return FALSE;
   }
 
 }

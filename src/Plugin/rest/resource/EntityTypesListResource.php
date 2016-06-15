@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\hydrant\Plugin\rest\resource;
+namespace Drupal\waterwheel\Plugin\rest\resource;
 
-use Drupal\hydrant\Plugin\rest\EntityTypeResourceBase;
+use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
 use Drupal\rest\ResourceResponse;
 
 /**
@@ -37,7 +37,7 @@ class EntityTypesListResource extends EntityTypeResourceBase {
    */
   protected function getEntityTypesData() {
     $type_infos = [];
-    /** @var \Drupal\hydrant\Plugin\rest\resource\EntityTypeResource $type_resource */
+    /** @var \Drupal\waterwheel\Plugin\rest\resource\EntityTypeResource $type_resource */
     $type_resource = $this->resourceManager->createInstance('entity_type_resource');
     /** @var \Symfony\Component\Routing\Route $route */
     $route = $type_resource->routes()->getIterator()->current();
@@ -49,7 +49,12 @@ class EntityTypesListResource extends EntityTypeResourceBase {
         'more' => str_replace('{entity_type}', $entity_type_id, $path),
         // @todo What other info?
       ];
+      if ($bundle_entity_type_id = $entity_type->getBundleEntityType()) {
+        $bundles = $this->entityTypeManager->getStorage($bundle_entity_type_id)->loadMultiple();
+        $type_infos[$entity_type_id]['bundles'] = array_keys($bundles);
+      }
     }
+
     return $type_infos;
   }
 
