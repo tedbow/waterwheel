@@ -37,15 +37,17 @@ class EntityTypesListResource extends EntityTypeResourceBase {
    */
   protected function getEntityTypesData() {
     $type_infos = [];
-    /** @var \Drupal\waterwheel\Plugin\rest\resource\EntityTypeResource $type_resource */
-    $type_resource = $this->resourceManager->createInstance('entity_type_resource');
+    /** @var \Drupal\waterwheel\Plugin\rest\resource\EntityTypeResource $bundle_resource */
+    $bundle_resource = $this->resourceManager->createInstance('bundle_type_resource');
     /** @var \Symfony\Component\Routing\Route $route */
-    $route = $type_resource->routes()->getIterator()->current();
+    $route = $bundle_resource->routes()->getIterator()->current();
     $path = $route->getPath();
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
       $type_infos[$entity_type_id] = [
         'label' => $entity_type->getLabel(),
         'type' => $this->getMetaEntityType($entity_type),
+        // @todo Should we only returns entities that have methods enabled.
+        'methods' => $this->getEntityMethods($entity_type_id),
         'more' => str_replace('{entity_type}', $entity_type_id, $path),
         // @todo What other info?
       ];
@@ -56,6 +58,42 @@ class EntityTypesListResource extends EntityTypeResourceBase {
     }
 
     return $type_infos;
+  }
+
+  /**
+   * Gets the REST methods and their paths for the entity type.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   *
+   * @return array
+   *   The REST methods.
+   *
+   *   The keys are the REST methods and the values are the paths.
+   */
+  protected function getEntityMethods($entity_type_id) {
+    $resource_methods = [];
+    $enabled_resources = \Drupal::config('rest.settings')->get('resources');
+    $entity_resource_key = "entity:$entity_type_id";
+    if (isset($enabled_resources[$entity_resource_key])) {
+      $enabled_methods = array_keys($enabled_resources[$entity_resource_key]);
+      /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $entity_resource */
+      $entity_resource = $this->resourceManager->createInstance($entity_resource_key);
+      /** @var \Symfony\Component\Routing\RouteCollection $routes */
+      $routes = $entity_resource->routes();
+
+      foreach ($enabled_methods as $method) {
+        /** @var \Symfony\Component\Routing\Route $route */
+        foreach ($routes as $route) {
+          if (in_array($method, $route->getMethods())) {
+            $resource_methods[$method] = $route->getPath();
+            break;
+          }
+        }
+      }
+    }
+
+    return $resource_methods;
   }
 
 }
