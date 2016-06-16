@@ -29,48 +29,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class EntityTypeResource extends EntityTypeResourceBase {
 
   use StringTranslationTrait;
-
-  /**
-   * The entity field manager.
-   *
-   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
-   */
-  protected $fieldManager;
-
-  /**
-   * EntityTypeResource constructor.
-   *
-   * @param array $configuration
-   * @param string $plugin_id
-   * @param mixed $plugin_definition
-   * @param array $serializer_formats
-   * @param \Psr\Log\LoggerInterface $logger
-   * @param \Drupal\Core\Session\AccountProxyInterface $current_user
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   * @param \Drupal\rest\Plugin\Type\ResourcePluginManager $resource_manager
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
-   */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, array $serializer_formats, LoggerInterface $logger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager, ResourcePluginManager $resource_manager, EntityFieldManagerInterface $field_manager) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger, $current_user, $entity_type_manager, $resource_manager);
-    $this->fieldManager = $field_manager;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $container->getParameter('serializer.formats'),
-      $container->get('logger.factory')->get('waterwheel'),
-      $container->get('current_user'),
-      $container->get('entity_type.manager'),
-      $container->get('plugin.manager.rest'),
-      $container->get('entity_field.manager')
-    );
-  }
+  
 
   /**
    * Responds to GET requests.
@@ -115,37 +74,6 @@ class EntityTypeResource extends EntityTypeResourceBase {
       $info['fields'] = $this->getFields($entity_type_id);
     }
     return $info;
-  }
-
-  /**
-   * Gets the REST methods and their paths for the entity type.
-   *
-   * @param string $entity_type_id
-   *   The entity type id.
-   *
-   * @return array
-   *   The REST methods.
-   *
-   *   The keys are the REST methods and the values are the paths.
-   */
-  protected function getEntityMethods($entity_type_id) {
-    /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $entity_resource */
-    $entity_resource = $this->resourceManager->createInstance("entity:$entity_type_id");
-    $methods = $entity_resource->availableMethods();
-    /** @var \Symfony\Component\Routing\RouteCollection $routes */
-    $routes = $entity_resource->routes();
-    $resource_methods = [];
-    foreach ($methods as $method) {
-      /** @var \Symfony\Component\Routing\Route $route */
-      foreach ($routes as $route) {
-        if (in_array($method, $route->getMethods())) {
-          $resource_methods[$method] = $route->getPath();
-          break;
-        }
-      }
-    }
-
-    return $resource_methods;
   }
 
   /**

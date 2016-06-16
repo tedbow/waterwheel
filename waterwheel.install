@@ -6,7 +6,11 @@
 function waterwheel_install() {
   $config = \Drupal::configFactory()->getEditable('rest.settings');
   $resources = $config->get('resources');
-  $get_resources = ['entity_types_list_resource', 'bundle_type_resource'];
+  $get_resources = [
+    'entity_types_list_resource',
+    'entity_type_resource',
+    'bundle_type_resource',
+  ];
   foreach ($get_resources as $resource) {
     $resources[$resource] = [
       'GET' => [

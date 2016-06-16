@@ -47,18 +47,30 @@ class EntityTypesListResource extends EntityTypeResourceBase {
       if (empty($methods)) {
         continue;
       }
+      $meta_type = $this->getMetaEntityType($entity_type);
       $type_infos[$entity_type_id] = [
         'label' => $entity_type->getLabel(),
-        'type' => $this->getMetaEntityType($entity_type),
+        'type' => $meta_type,
         // @todo Should we only returns entities that have methods enabled.
         'methods' => $this->getEntityMethods($entity_type_id),
-        'more' => str_replace('{entity_type}', $entity_type_id, $path),
         // @todo What other info?
       ];
-      if ($bundle_entity_type_id = $entity_type->getBundleEntityType()) {
-        $bundles = $this->entityTypeManager->getStorage($bundle_entity_type_id)->loadMultiple();
-        $type_infos[$entity_type_id]['bundles'] = array_keys($bundles);
+
+      if($meta_type == 'content') {
+        if ($bundle_entity_type_id = $entity_type->getBundleEntityType()) {
+          $bundles = $this->entityTypeManager->getStorage($bundle_entity_type_id)->loadMultiple();
+          $type_infos[$entity_type_id]['bundles'] = array_keys($bundles);
+          $type_infos[$entity_type_id]['more'] = str_replace('{entity_type}', $entity_type_id, $path);
+        }
+        else {
+          // Content entity types with bundles use a default bundle which the entity type id.
+          $type_infos[$entity_type_id]['more'] = "entity/types/$entity_type_id/$entity_type_id";
+        }
       }
+      else {
+        $type_infos[$entity_type_id]['more'] = "entity/types/$entity_type_id";
+      }
+
     }
 
     return $type_infos;

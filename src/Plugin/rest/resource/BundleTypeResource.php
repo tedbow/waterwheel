@@ -30,47 +30,7 @@ class BundleTypeResource extends EntityTypeResourceBase {
 
   use StringTranslationTrait;
 
-  /**
-   * The entity field manager.
-   *
-   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
-   */
-  protected $fieldManager;
 
-  /**
-   * EntityTypeResource constructor.
-   *
-   * @param array $configuration
-   * @param string $plugin_id
-   * @param mixed $plugin_definition
-   * @param array $serializer_formats
-   * @param \Psr\Log\LoggerInterface $logger
-   * @param \Drupal\Core\Session\AccountProxyInterface $current_user
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   * @param \Drupal\rest\Plugin\Type\ResourcePluginManager $resource_manager
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
-   */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, array $serializer_formats, LoggerInterface $logger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager, ResourcePluginManager $resource_manager, EntityFieldManagerInterface $field_manager) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger, $current_user, $entity_type_manager, $resource_manager);
-    $this->fieldManager = $field_manager;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $container->getParameter('serializer.formats'),
-      $container->get('logger.factory')->get('waterwheel'),
-      $container->get('current_user'),
-      $container->get('entity_type.manager'),
-      $container->get('plugin.manager.rest'),
-      $container->get('entity_field.manager')
-    );
-  }
 
   /**
    * Responds to GET requests.
@@ -113,44 +73,14 @@ class BundleTypeResource extends EntityTypeResourceBase {
       return $bundle_info;
     }
     else {
+      $bundle_info['label'] = $entity_type->getLabel();
+      $bundle_info['fields'] = $this->getBundleFields($entity_type_id, $bundle_name);
+      return $bundle_info;
       throw new NotFoundHttpException($this->t('Entity type <em>@type</em> does not support bundles.', ['@type' => $entity_type_id]));
     }
   }
 
-  /**
-   * Gets information on all the fields on the bundle.
-   *
-   * @param string $entity_type_id
-   * @param string $bundle_name
-   *
-   * @return array
-   */
-  protected function getBundleFields($entity_type_id, $bundle_name) {
-    $fields = [];
-    $field_definitions = $this->fieldManager->getFieldDefinitions($entity_type_id, $bundle_name);
-    foreach ($field_definitions as $field_name => $field_definition) {
-      $field_type = $field_definition->getType();
 
-      $field_info = [
-        'label' => $field_definition->getLabel(),
-        'type' => $field_type,
-        'data_type' => $field_definition->getDataType(),
-        'required' => $field_definition->isRequired(),
-        'readonly' => $field_definition->isReadOnly(),
-        'cardinality' => $field_definition->getFieldStorageDefinition()->getCardinality(),
-        'settings' => $field_definition->getSettings(),
-      ];
-      if ($this->isReferenceField($field_definition)) {
-        $field_info['is_reference']  = TRUE;
-        // @todo Pull reference entity type and bundles out of settings for easier access?
-      }
-      else {
-        $field_info['is_reference']  = FALSE;
-      }
-      $fields[$field_name] = $field_info;
-    }
-    return $fields;
-  }
 
   /**
    * Determines if a field is a reference type field.
