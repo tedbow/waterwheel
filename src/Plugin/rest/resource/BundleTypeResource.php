@@ -2,17 +2,9 @@
 
 namespace Drupal\waterwheel\Plugin\rest\resource;
 
-
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\ResourceResponse;
 use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -27,7 +19,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * )
  */
 class BundleTypeResource extends EntityTypeResourceBase {
-  
+
 
 
 
