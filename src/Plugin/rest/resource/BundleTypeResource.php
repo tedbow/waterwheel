@@ -27,8 +27,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * )
  */
 class BundleTypeResource extends EntityTypeResourceBase {
-
-  use StringTranslationTrait;
+  
 
 
 

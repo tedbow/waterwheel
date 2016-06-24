@@ -28,8 +28,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class EntityTypeResource extends EntityTypeResourceBase {
 
-  use StringTranslationTrait;
-  
 
   /**
    * Responds to GET requests.

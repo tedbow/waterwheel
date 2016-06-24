@@ -4,3 +4,8 @@ services:
     tags:
       - { name: event_subscriber }
     arguments: ['@serializer', '%serializer.formats%']
+  waterwheel.exception.default:
+      class: Drupal\waterwheel\EventSubscriber\DefaultExceptionSubscriber
+      tags:
+        - { name: event_subscriber }
+      arguments: ['@serializer', '%serializer.formats%']
