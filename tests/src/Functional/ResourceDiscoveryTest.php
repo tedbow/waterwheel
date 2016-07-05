@@ -3,7 +3,6 @@
 namespace Drupal\waterwheel\Tests;
 
 use Drupal\Core\Url;
-use Drupal\rest\Tests\RESTTestBase;
 use Drupal\serialization\Encoder\JsonEncoder;
 use Drupal\Tests\BrowserTestBase;
 use GuzzleHttp\Cookie\CookieJar;

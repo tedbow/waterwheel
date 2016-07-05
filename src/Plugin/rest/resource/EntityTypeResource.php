@@ -3,20 +3,14 @@
 namespace Drupal\waterwheel\Plugin\rest\resource;
 
 use Drupal\Core\Entity\ContentEntityTypeInterface;
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
-use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\ResourceResponse;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * @todo Can the resource be removed?
  * Provides a resource to get information about an entity type.
+ *
+ * @todo Can the resource be removed?
  *
  * @RestResource(
  *   id = "entity_type_resource",
@@ -28,17 +22,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class EntityTypeResource extends EntityTypeResourceBase {
 
-
   /**
    * Responds to GET requests.
    *
    * Returns a list of bundles for specified entity.
    *
-   * @param $entity_type_id
+   * @param string $entity_type_id
    *   The entity type id for the request.
    *
-   * @return \Drupal\rest\ResourceResponse Throws exception expected.
-   * Throws exception expected.
+   * @return \Drupal\rest\ResourceResponse
+   *   Throws exception expected.
    */
   public function get($entity_type_id) {
     parent::checkAccess();
@@ -77,7 +70,8 @@ class EntityTypeResource extends EntityTypeResourceBase {
   /**
    * Gets the information about fields for the entity type.
    *
-   * //@ todo currently it only retrieves the base fields. Should it get user configurable fields.
+   * @todo currently it only retrieves the base fields.
+   *  Should it get user configurable fields.
    *
    * @param string $entity_type_id
    *   The entity type containing the fields.

@@ -4,6 +4,7 @@
  * Implements hook_install().
  */
 function waterwheel_install() {
+  // Enable all REST resources available from this module.
   $config = \Drupal::configFactory()->getEditable('rest.settings');
   $resources = $config->get('resources');
   $get_resources = [
@@ -15,6 +16,7 @@ function waterwheel_install() {
     $resources[$resource] = [
       'GET' => [
         'supported_formats' => ['json'],
+        // Update to support other configuration. For example oauth.
         'supported_auth' => ['cookie'],
       ],
     ];

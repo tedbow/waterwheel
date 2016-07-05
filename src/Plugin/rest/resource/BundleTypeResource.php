@@ -20,9 +20,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class BundleTypeResource extends EntityTypeResourceBase {
 
-
-
-
   /**
    * Responds to GET requests.
    *
@@ -30,13 +27,11 @@ class BundleTypeResource extends EntityTypeResourceBase {
    *
    * @param string $entity_type_id
    *   The entity type id for the request.
-   *
    * @param string $bundle_name
    *   The bundle machine name.
    *
    * @return \Drupal\rest\ResourceResponse
-   *
-   * Throws exception expected.
+   *   The resource response.
    */
   public function get($entity_type_id, $bundle_name) {
     parent::checkAccess();
@@ -47,9 +42,12 @@ class BundleTypeResource extends EntityTypeResourceBase {
    * Gets information about the bundle.
    *
    * @param string $entity_type_id
+   *   The entity type id.
    * @param string $bundle_name
+   *   The bundle name.
    *
-   * @return mixed
+   * @return array
+   *   The bundle info.
    */
   protected function getBundleInfo($entity_type_id, $bundle_name) {
     // @todo Load entity type in route system?
@@ -67,18 +65,17 @@ class BundleTypeResource extends EntityTypeResourceBase {
       $bundle_info['label'] = $entity_type->getLabel();
       $bundle_info['fields'] = $this->getBundleFields($entity_type_id, $bundle_name);
       return $bundle_info;
-      throw new NotFoundHttpException($this->t('Entity type <em>@type</em> does not support bundles.', ['@type' => $entity_type_id]));
     }
   }
-
-
 
   /**
    * Determines if a field is a reference type field.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   *   The field definition.
    *
    * @return bool
+   *   True if the field is a reference field.
    */
   protected function isReferenceField(FieldDefinitionInterface $field_definition) {
     // @todo Is there an easier to check if field is reference

@@ -1,4 +1,5 @@
-
+# Currently there is 1 permission to see all site configuration made available
+# from Waterwheel.
 view site configuration:
   title: 'View site configuration'
   description: 'Allow access to read but not update all site configuration.'
