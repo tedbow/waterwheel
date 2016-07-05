@@ -1,12 +1,12 @@
 <?php
 
-namespace Drupal\Tests\waterwheel\Functional;
+namespace Drupal\waterwheel\Tests;
 
 use Drupal\Core\Url;
+use Drupal\rest\Tests\RESTTestBase;
 use Drupal\serialization\Encoder\JsonEncoder;
 use Drupal\Tests\BrowserTestBase;
 use GuzzleHttp\Cookie\CookieJar;
-use Masterminds\HTML5\Exception;
 use Symfony\Component\Serializer\Serializer;
 
 /**
@@ -45,10 +45,10 @@ class ResourceDiscoveryTest extends BrowserTestBase {
     $encoders = [new JsonEncoder()];
     $this->serializer = new Serializer([], $encoders);
 
+    // @todo Move these modules to $modules field. Currently does not work.
     /** @var \Drupal\Core\Extension\ModuleInstaller $module_installer */
     $module_installer = $this->container->get('module_installer');
     $module_installer->install(['serialization']);
-
     $module_installer->install(['rest']);
     $module_installer->install(['waterwheel']);
 
@@ -148,9 +148,14 @@ class ResourceDiscoveryTest extends BrowserTestBase {
   }
 
   /**
-   * @param $client
+   * Helper function for making requests and testing against expected results.
    *
-   * @return mixed
+   * @param string $route_name
+   *   The name of the route to test.
+   * @param array $expected_results
+   *   The expected to results to test against.
+   * @param array $route_parameters
+   *   The route parameters to use when making the requests.
    */
   protected function makeRequest($route_name, $expected_results, $route_parameters = []) {
     $url = Url::fromRoute($route_name);
@@ -166,10 +171,22 @@ class ResourceDiscoveryTest extends BrowserTestBase {
     $results_array = $this->serializer->decode($result->getBody(), 'json');
 
     $this->assertEquals($expected_results, $results_array);
-    return $result;
   }
 
-  protected function getExpectedBundle($entity_type, $bundle) {
+  /**
+   * The expected results for bundle info requests.
+   *
+   * @param string $entity_type_id
+   *   The id of the entity to get expected results for.
+   * @param string $bundle_name
+   *   The name of the bundle to get expected results for.
+   *
+   * @return array
+   *   The array of expected results.
+   * @throws \Exception
+   *   If entity_type_id and bundle name are not supported.
+   */
+  protected function getExpectedBundle($entity_type_id, $bundle_name) {
     $expected['node']['page'] = array(
       'label' => 'Page',
       'fields' =>
@@ -448,10 +465,10 @@ class ResourceDiscoveryTest extends BrowserTestBase {
             ),
         ),
     );
-    if (isset($expected[$entity_type][$bundle])) {
-      return $expected[$entity_type][$bundle];
+    if (isset($expected[$entity_type_id][$bundle_name])) {
+      return $expected[$entity_type_id][$bundle_name];
     }
-    throw new \Exception("Unknown resource: $entity_type:$bundle");
+    throw new \Exception("Unknown resource: $entity_type_id:$bundle_name");
   }
 
 }
