@@ -2,9 +2,10 @@
 
 namespace Drupal\waterwheel\Tests;
 
+use Drupal\Component\Serialization\Json;
 use Drupal\Core\Url;
+use Drupal\rest\Tests\RESTTestBase;
 use Drupal\serialization\Encoder\JsonEncoder;
-use Drupal\Tests\BrowserTestBase;
 use GuzzleHttp\Cookie\CookieJar;
 use Symfony\Component\Serializer\Serializer;
 
@@ -13,7 +14,7 @@ use Symfony\Component\Serializer\Serializer;
  *
  * @group waterwheel
  */
-class ResourceDiscoveryTest extends BrowserTestBase {
+class ResourceDiscoveryTest extends RESTTestBase {
   /**
    * The serializer.
    *
@@ -26,30 +27,25 @@ class ResourceDiscoveryTest extends BrowserTestBase {
    *
    * @var \GuzzleHttp\Cookie\CookieJar
    */
-  protected $cookies;
+  protected $guzzle_cookies;
 
   /**
    * Modules to enable.
    *
    * @var array
    */
-  public static $modules = ['system', 'node'];
+  public static $modules = ['system', 'node', 'serialization', 'rest', 'waterwheel'];
 
   /**
    * {@inheritdoc}
    */
   protected function setUp() {
     parent::setUp();
-    $this->cookies = new CookieJar();
+    $this->defaultFormat = 'json';
+    $this->defaultMimeType = 'application/json';
+    $this->guzzle_cookies = new CookieJar();
     $encoders = [new JsonEncoder()];
     $this->serializer = new Serializer([], $encoders);
-
-    // @todo Move these modules to $modules field. Currently does not work.
-    /** @var \Drupal\Core\Extension\ModuleInstaller $module_installer */
-    $module_installer = $this->container->get('module_installer');
-    $module_installer->install(['serialization']);
-    $module_installer->install(['rest']);
-    $module_installer->install(['waterwheel']);
 
     $this->drupalCreateContentType(['type' => 'page', 'name' => 'Page']);
   }
@@ -67,20 +63,28 @@ class ResourceDiscoveryTest extends BrowserTestBase {
     );
     $this->drupalLogin($user);
 
-    $result = $this->loginRequest($user->getAccountName(), $user->passRaw);
-    $this->assertEquals(200, $result->getStatusCode());
+    $result = $this->loginRequest($user->getAccountName(), $user->pass_raw);
+    $this->assertEqual(200, $result->getStatusCode());
 
-    $this->makeRequest('rest.entity_types_list_resource.GET.json', $this->getExpectedResources());
-    $this->makeRequest('rest.bundle_type_resource.GET.json',
-      $this->getExpectedBundle('node', 'page'),
+
+    $url = Url::fromRoute('rest.entity_types_list_resource.GET.json')->setRouteParameter('_format', $this->defaultFormat);
+    $response = $this->httpRequest($url, 'GET');
+    $this->assertResponse(200);
+    $data = Json::decode($response);
+    $this->assertEqual($data, $this->getExpectedResources(), 'Resource list correct');
+
+    $url = Url::fromRoute('rest.bundle_type_resource.GET.json');
+    $url->setRouteParameters(
       [
+        '_format' => $this->defaultFormat,
         'entity_type' => 'node',
         'bundle' => 'page',
       ]
     );
-
-
-
+    $response = $this->httpRequest($url, 'GET');
+    $this->assertResponse(200);
+    $data = Json::decode($response);
+    $this->assertEqual($data, $this->getExpectedBundle('node', 'page'), 'Page bundle information correct.');
   }
 
   /**
@@ -115,7 +119,7 @@ class ResourceDiscoveryTest extends BrowserTestBase {
         'Accept' => "application/$format",
       ],
       'http_errors' => FALSE,
-      'cookies' => $this->cookies,
+      'guzzle_cookies' => $this->guzzle_cookies,
     ]);
     return $result;
   }
@@ -139,37 +143,11 @@ class ResourceDiscoveryTest extends BrowserTestBase {
               'PATCH' => '/node/{node}',
               'DELETE' => '/node/{node}',
             ],
-          'bundles' => ['page'],
+          'bundles' => ['page', 'resttest'],
           'more' => '/entity/types/node/{bundle}',
         ],
     ];
     return $expected_resources;
-  }
-
-  /**
-   * Helper function for making requests and testing against expected results.
-   *
-   * @param string $route_name
-   *   The name of the route to test.
-   * @param array $expected_results
-   *   The expected to results to test against.
-   * @param array $route_parameters
-   *   The route parameters to use when making the requests.
-   */
-  protected function makeRequest($route_name, $expected_results, $route_parameters = []) {
-    $url = Url::fromRoute($route_name);
-
-    $route_parameters += ['_format' => 'json'];
-    $url->setRouteParameters($route_parameters);
-
-    $url_string = $url->setAbsolute()->toString();
-
-    $result = \Drupal::httpClient()->get($url_string, ['cookies' => $this->cookies]);
-
-    $this->assertEquals(200, $result->getStatusCode());
-    $results_array = $this->serializer->decode($result->getBody(), 'json');
-
-    $this->assertEquals($expected_results, $results_array);
   }
 
   /**
