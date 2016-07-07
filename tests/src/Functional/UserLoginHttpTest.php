@@ -38,7 +38,7 @@ class UserLoginHttpTest extends BrowserTestBase {
    *
    * @var array
    */
-  public static $modules = ['system','node'];
+  public static $modules = ['system', 'node'];
 
   /**
    * {@inheritdoc}
@@ -49,10 +49,11 @@ class UserLoginHttpTest extends BrowserTestBase {
     $encoders = [new JsonEncoder(), new XmlEncoder()];
     $this->serializer = new Serializer([], $encoders);
 
+    // @todo Move these modules to $module property.
+    //   For some reason it will not work now.
     /** @var \Drupal\Core\Extension\ModuleInstaller $module_installer */
     $module_installer = $this->container->get('module_installer');
     $module_installer->install(['serialization']);
-    //
     $module_installer->install(['rest']);
     $module_installer->install(['waterwheel']);
   }

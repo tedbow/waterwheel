@@ -62,56 +62,82 @@ class ResourceDiscoveryTest extends RESTTestBase {
    * Tests discovering resources.
    */
   public function testResourceDiscovery() {
+    // Test for access denied to test permission logic in
+    // \Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase::getBaseRoute()
+    $access_possibilities = [TRUE, FALSE];
+    foreach ($access_possibilities as $access_possibility) {
+      if ($access_possibility) {
+        $user = $this->drupalCreateUser(['waterwheel GET site configuration']);
+        $status_code = 200;
+      }
+      else {
+        $user = $this->drupalCreateUser();
+        $status_code = 403;
+      }
+      $this->drupalLogin($user);
 
-    $user = $this->drupalCreateUser(
-      [
-        'view site configuration',
-        'restful get entity_types_list_resource',
-        'restful get bundle_type_resource',
-        'restful get entity_type_resource',
-      ]
-    );
-    $this->drupalLogin($user);
-    $config = $this->config('rest.settings');
-    $this->verbose(print_r($config->getRawData(), 1));
+      $this->enableService('entity:user', 'GET', 'cookie');
+      $this->enableService('entity:taxonomy_vocabulary', 'GET', 'cookie');
 
-    $this->enableService('entity:user', 'GET', 'cookie');
-    $this->enableService('entity:taxonomy_vocabulary', 'GET', 'cookie');
+      $result = $this->loginRequest($user->getAccountName(), $user->pass_raw);
+      $this->assertEqual(200, $result->getStatusCode());
 
-    $result = $this->loginRequest($user->getAccountName(), $user->pass_raw);
-    $this->assertEqual(200, $result->getStatusCode());
+      $url = Url::fromRoute('rest.entity_types_list_resource.GET.json')->setRouteParameter('_format', 'json');
+      if ($access_possibility) {
+        $expected = $this->getExpectedResources();
+      }
+      else {
+        $expected = NULL;
+      }
+      $this->assertHttpResponse($url, 'GET', $status_code, $expected, 'Resource list correct');
 
-    $url = Url::fromRoute('rest.entity_types_list_resource.GET.json')->setRouteParameter('_format', 'json');
-    $this->assertHttpResponse($url, 'GET', 200, $this->getExpectedResources(), 'Resource list correct');
+      $url = Url::fromRoute('rest.bundle_type_resource.GET.json');
+      $url->setRouteParameters(
+        [
+          '_format' => 'json',
+          'entity_type' => 'node',
+          'bundle' => 'page',
+        ]
+      );
+      if ($access_possibility) {
+        $expected = $this->getExpectedBundle('node', 'page');
+      }
+      else {
+        $expected = NULL;
+      }
+      $this->assertHttpResponse($url, 'GET', $status_code, $expected, 'Page bundle information correct.');
 
-    $url = Url::fromRoute('rest.bundle_type_resource.GET.json');
-    $url->setRouteParameters(
-      [
-        '_format' => 'json',
-        'entity_type' => 'node',
-        'bundle' => 'page',
-      ]
-    );
-    $this->assertHttpResponse($url, 'GET', 200, $this->getExpectedBundle('node', 'page'), 'Page bundle information correct.');
+      $url = Url::fromRoute('rest.bundle_type_resource.GET.json');
+      $url->setRouteParameters(
+        [
+          '_format' => 'json',
+          'entity_type' => 'user',
+          'bundle' => 'user',
+        ]
+      );
+      if ($access_possibility) {
+        $expected = $this->getExpectedBundle('user', 'user');
+      }
+      else {
+        $expected = NULL;
+      }
+      $this->assertHttpResponse($url, 'GET', $status_code, $expected, 'User bundle information correct.');
 
-    $url = Url::fromRoute('rest.bundle_type_resource.GET.json');
-    $url->setRouteParameters(
-      [
-        '_format' => 'json',
-        'entity_type' => 'user',
-        'bundle' => 'user',
-      ]
-    );
-    $this->assertHttpResponse($url, 'GET', 200, $this->getExpectedBundle('user', 'user'), 'User bundle information correct.');
-
-    $url = Url::fromRoute('rest.entity_type_resource.GET.json');
-    $url->setRouteParameters(
-      [
-        '_format' => 'json',
-        'entity_type' => 'taxonomy_vocabulary',
-      ]
-    );
-    $this->assertHttpResponse($url, 'GET', 200, $this->getExpectedEntityType('taxonomy_vocabulary'), 'Vocabulary information correct.');
+      $url = Url::fromRoute('rest.entity_type_resource.GET.json');
+      $url->setRouteParameters(
+        [
+          '_format' => 'json',
+          'entity_type' => 'taxonomy_vocabulary',
+        ]
+      );
+      if ($access_possibility) {
+        $expected = $this->getExpectedEntityType('taxonomy_vocabulary');
+      }
+      else {
+        $expected = NULL;
+      }
+      $this->assertHttpResponse($url, 'GET', $status_code, $expected, 'Vocabulary information correct.');
+    }
   }
 
   /**
@@ -802,8 +828,10 @@ class ResourceDiscoveryTest extends RESTTestBase {
   protected function assertHttpResponse(Url $url, $method, $status_code, $expected_result, $message = '') {
     $response = $this->httpRequest($url, $method);
     $this->assertResponse($status_code);
-    $data = Json::decode($response);
-    $this->assertEqual($data, $expected_result, $message);
+    if ($expected_result !== NULL) {
+      $data = Json::decode($response);
+      $this->assertEqual($data, $expected_result, $message);
+    }
   }
 
   /**

@@ -7,12 +7,12 @@ use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * The base class for resources returning entity type information.
@@ -64,6 +64,8 @@ abstract class EntityTypeResourceBase extends ResourceBase {
    *   The entity type manager.
    * @param \Drupal\rest\Plugin\Type\ResourcePluginManager $resource_manager
    *   The rest resource manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
+   *   The entity field manager.
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, array $serializer_formats, LoggerInterface $logger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager, ResourcePluginManager $resource_manager, EntityFieldManagerInterface $field_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger);
@@ -88,18 +90,6 @@ abstract class EntityTypeResourceBase extends ResourceBase {
       $container->get('plugin.manager.rest'),
       $container->get('entity_field.manager')
     );
-  }
-
-  /**
-   * Checks if the current user has access to view site configuration.
-   *
-   * @throws \Symfony\Component\HttpKernel\Exception\HttpException
-   *   Throws exception expected.
-   */
-  public function checkAccess() {
-    if (!$this->currentUser->hasPermission('view site configuration')) {
-      throw new AccessDeniedHttpException();
-    }
   }
 
   /**
@@ -166,9 +156,12 @@ abstract class EntityTypeResourceBase extends ResourceBase {
    * Gets information on all the fields on the bundle.
    *
    * @param string $entity_type_id
+   *   The entity type id.
    * @param string $bundle_name
+   *   The bundle name.
    *
    * @return array
+   *   The information about the bundle's fields.
    */
   protected function getBundleFields($entity_type_id, $bundle_name) {
     $fields = [];
@@ -195,6 +188,56 @@ abstract class EntityTypeResourceBase extends ResourceBase {
       $fields[$field_name] = $field_info;
     }
     return $fields;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function permissions() {
+    return [
+      'waterwheel GET site configuration' => [
+        'title' => $this->t('Access site configuration through Waterwheel endpoints'),
+      ],
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getBaseRoute($canonical_path, $method) {
+    $route = parent::getBaseRoute($canonical_path, $method);
+    // \Drupal\rest\Plugin\ResourceBase::getBaseRoute does NOT use
+    // \Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase::permissions().
+    // to create permissions for the route.
+    // @todo @see https://www.drupal.org/node/2664780 use new
+    //   \Drupal\rest\Plugin\ResourceBase::getBaseRouteRequirements().
+    $permissions = array_keys($this->permissions());
+    $permission = array_shift($permissions);
+    $route->setRequirement('_permission', $permission);
+    return $route;
+  }
+
+  /**
+   * Determines if a field is a reference type field.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   *   The field definition.
+   *
+   * @return bool
+   *   True if the field is a reference field.
+   */
+  protected function isReferenceField(FieldDefinitionInterface $field_definition) {
+    // @todo Is there an easier to check if field is reference
+    // @todo Dependency injection
+    /** @var \Drupal\Core\Field\FieldTypePluginManagerInterface $field_manager */
+    $field_manager = \Drupal::getContainer()->get('plugin.manager.field.field_type');
+    $plugin_definition = $field_manager->getDefinition($field_definition->getType());
+    $class = $plugin_definition['class'];
+    $reference_class = 'Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem';
+    if (is_subclass_of($class, $reference_class) || $class == $reference_class) {
+      return TRUE;
+    }
+    return FALSE;
   }
 
 }

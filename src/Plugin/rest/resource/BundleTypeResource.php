@@ -2,7 +2,6 @@
 
 namespace Drupal\waterwheel\Plugin\rest\resource;
 
-use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\rest\ResourceResponse;
 use Drupal\waterwheel\Plugin\rest\EntityTypeResourceBase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -34,7 +33,6 @@ class BundleTypeResource extends EntityTypeResourceBase {
    *   The resource response.
    */
   public function get($entity_type_id, $bundle_name) {
-    parent::checkAccess();
     return new ResourceResponse($this->getBundleInfo($entity_type_id, $bundle_name));
   }
 
@@ -66,29 +64,6 @@ class BundleTypeResource extends EntityTypeResourceBase {
       $bundle_info['fields'] = $this->getBundleFields($entity_type_id, $bundle_name);
       return $bundle_info;
     }
-  }
-
-  /**
-   * Determines if a field is a reference type field.
-   *
-   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
-   *   The field definition.
-   *
-   * @return bool
-   *   True if the field is a reference field.
-   */
-  protected function isReferenceField(FieldDefinitionInterface $field_definition) {
-    // @todo Is there an easier to check if field is reference
-    // @todo Dependency injection
-    /** @var \Drupal\Core\Field\FieldTypePluginManagerInterface $field_manager */
-    $field_manager = \Drupal::getContainer()->get('plugin.manager.field.field_type');
-    $plugin_definition = $field_manager->getDefinition($field_definition->getType());
-    $class = $plugin_definition['class'];
-    $reference_class = 'Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem';
-    if (is_subclass_of($class, $reference_class) || $class == $reference_class) {
-      return TRUE;
-    }
-    return FALSE;
   }
 
 }

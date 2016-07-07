@@ -25,7 +25,6 @@ class EntityTypesListResource extends EntityTypeResourceBase {
    *   Throws exception expected.
    */
   public function get() {
-    parent::checkAccess();
     return new ResourceResponse($this->getEntityTypesData());
   }
 
