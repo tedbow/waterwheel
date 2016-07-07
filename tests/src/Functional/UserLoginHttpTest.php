@@ -15,6 +15,10 @@ use Symfony\Component\Serializer\Serializer;
 /**
  * Tests login via direct HTTP.
  *
+ * @todo CSRF protection has not been added yet.
+ *   Add after https://www.drupal.org/node/2753681
+ *   Add function testLogoutCsrfProtection().
+ *
  * @group waterwheel
  */
 class UserLoginHttpTest extends BrowserTestBase {
@@ -374,52 +378,6 @@ class UserLoginHttpTest extends BrowserTestBase {
     $response = $client->post($user_logout_url->toString(), $post_options);
     return $response;
   }
-
-  /**
-   * Test csrf protection of User Logout route.
-   */
-  /* @todo CSRF protection has not been added yet.
-   * Add after https://www.drupal.org/node/2753681
-  public function testLogoutCsrfProtection() {
-    $client = \Drupal::httpClient();
-    $login_status_url = $this->getLoginStatusUrlString();
-    $account = $this->drupalCreateUser();
-    $name = $account->getUsername();
-    $pass = $account->passRaw;
-
-    $response = $this->loginRequest($name, $pass);
-    $this->assertEquals(200, $response->getStatusCode());
-    $result_data = $this->serializer->decode($response->getBody(), 'json');
-
-    $csrf_token = $result_data['csrf_token'];
-
-
-    // Test third party site posting to current site with logout request.
-    // This should not logout the current user because it lacks the CSRF
-    // token.
-    $response = $this->logoutRequest('json', FALSE);
-    $this->assertEquals(403, $response->getStatusCode());
-
-    // Ensure still logged in.
-    $response = $client->get($login_status_url, ['cookies' => $this->cookies]);
-    $this->assertHttpResponse($response, 200, UserAuthenticationController::LOGGED_IN);
-
-    // Try with an incorrect token.
-    $response = $this->logoutRequest('json', 'not-the-correct-token');
-    $this->assertEquals(403, $response->getStatusCode());
-
-    // Ensure still logged in.
-    $response = $client->get($login_status_url, ['cookies' => $this->cookies]);
-    $this->assertHttpResponse($response, 200, UserAuthenticationController::LOGGED_IN);
-
-
-    // Try a logout request with correct token.
-    $response = $this->logoutRequest('json', $csrf_token);
-    $this->assertEquals(204, $response->getStatusCode());
-    $response = $client->get($login_status_url, ['cookies' => $this->cookies]);
-    $this->assertHttpResponse($response, 200, UserAuthenticationController::LOGGED_OUT);
-  }
-   */
 
   /**
    * Gets the URL string for checking login.
