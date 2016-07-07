@@ -19,6 +19,8 @@ use Symfony\Component\Serializer\Serializer;
  *   Add after https://www.drupal.org/node/2753681
  *   Add function testLogoutCsrfProtection().
  *
+ * @see http://cgit.drupalcode.org/waterwheel/commit/?id=ee1135f2aa268a8c1ac456489b28cf2db184b606
+ *
  * @group waterwheel
  */
 class UserLoginHttpTest extends BrowserTestBase {
