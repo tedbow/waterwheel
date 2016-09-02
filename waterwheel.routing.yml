@@ -1,0 +1,8 @@
+waterwheel.swagger:
+  path: '/water-wheel/swagger'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerAPI'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+    _format: 'json'
