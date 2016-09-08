@@ -6,3 +6,11 @@ waterwheel.swagger:
   requirements:
     _access: 'TRUE'
     _format: 'json'
+
+waterwheel.swaggerUI:
+  path: '/water-wheel/swagger-ui'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerUiPage'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
