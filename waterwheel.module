@@ -1,11 +1,6 @@
 <?php
 
 /**
- * @file
- * Hooks.
- */
-
-/**
  * Implements hook_help().
  */
 function waterwheel_help($path, $arg) {

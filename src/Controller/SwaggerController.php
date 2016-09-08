@@ -60,11 +60,14 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Output Swagger compatible API spec.
    */
   public function swaggerAPI() {
+    global $base_root;
     $spec = [
       'swagger' => "2.0",
       'schemes' => 'http',
       'info' => $this->getInfo(),
       'paths' => $this->getPaths(),
+      'host' => \Drupal::request()->getHost(),
+      'basePath' => \Drupal::request()->getBasePath(),
 
     ];
     $response = new JsonResponse($spec);
@@ -98,10 +101,20 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     foreach ($resources as $id => $resource) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
       $plugin = $this->manager->getInstance(array('id' => $id));
+
+      $resources = $this->config('rest.settings')->get('resources') ?: array();
+      $enabled_resources = array_intersect_key($resources, $this->manager->getDefinitions());
+      if (count($resources) != count($enabled_resources)) {
+        trigger_error('rest.settings lists resources relying on the following missing plugins: ' . implode(', ', array_keys(array_diff_key($resources, $enabled_resources))));
+      }
       $routes = $plugin->routes();
       /** @var \Symfony\Component\Routing\Route $route */
       foreach ($routes as $route) {
 
+
+        /** @var \Drupal\Core\Routing\RouteProviderInterface $route_provider */
+        $route_provider = \Drupal::service('router.route_provider');
+        //$route_provider->getRouteByName('rest.' . $route-)
         $path = $route->getPath();
         $format = $route->getRequirement('_format');
         $methods = $route->getMethods();
@@ -172,6 +185,18 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       }
     }
     return $parameter;
+
+  }
+
+  public function swaggerUiPage() {
+    $build = [
+      '#theme' => 'swagger_ui',
+      '#attached' => [
+        'library' => ['waterwheel/swagger_ui_integration', 'waterwheel/swagger_ui'],
+      ],
+    ];
+
+    return $build;
 
   }
 }
