@@ -4,4 +4,4 @@ description: Connector module for the Waterwheel Javascript Library
 core: 8.x
 package: Waterwheel
 dependencies:
-  - rest
+  - rest (>= 8.2)
