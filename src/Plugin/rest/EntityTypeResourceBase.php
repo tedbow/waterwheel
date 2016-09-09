@@ -129,15 +129,14 @@ abstract class EntityTypeResourceBase extends ResourceBase {
    */
   protected function getEntityMethods($entity_type_id) {
     $resource_methods = [];
-    $enabled_resources = \Drupal::config('rest.settings')->get('resources');
     $entity_resource_key = "entity:$entity_type_id";
-    if (isset($enabled_resources[$entity_resource_key])) {
-      $enabled_methods = array_keys($enabled_resources[$entity_resource_key]);
+    /** @var \Drupal\rest\Entity\RestResourceConfig $rest_resource */
+    if ($rest_resource = $this->entityTypeManager->getStorage('rest_resource_config')->load("entity.$entity_type_id")) {
+      $enabled_methods = $rest_resource->getMethods();
       /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $entity_resource */
       $entity_resource = $this->resourceManager->createInstance($entity_resource_key);
-      /** @var \Symfony\Component\Routing\RouteCollection $routes */
-      $routes = $entity_resource->routes();
 
+      $routes = $entity_resource->routes();
       foreach ($enabled_methods as $method) {
         /** @var \Symfony\Component\Routing\Route $route */
         foreach ($routes as $route) {
@@ -148,7 +147,6 @@ abstract class EntityTypeResourceBase extends ResourceBase {
         }
       }
     }
-
     return $resource_methods;
   }
 

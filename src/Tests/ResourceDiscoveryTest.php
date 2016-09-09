@@ -75,9 +75,16 @@ class ResourceDiscoveryTest extends RESTTestBase {
         $status_code = 403;
       }
       $this->drupalLogin($user);
-
-      $this->enableService('entity:user', 'GET', 'cookie');
-      $this->enableService('entity:taxonomy_vocabulary', 'GET', 'cookie');
+      $enable_entity_types = [
+        'node' => ['GET', 'POST', 'PATCH', 'DELETE'],
+        'user' => ['GET'],
+        'taxonomy_vocabulary' => ['GET'],
+      ];
+      foreach ($enable_entity_types as $entity_type_id => $methods) {
+        foreach ($methods as $method) {
+          $this->enableService("entity:$entity_type_id", $method, 'cookie');
+        }
+      }
 
       $result = $this->loginRequest($user->getAccountName(), $user->pass_raw);
       $this->assertEqual(200, $result->getStatusCode());
@@ -185,20 +192,6 @@ class ResourceDiscoveryTest extends RESTTestBase {
    */
   protected function getExpectedResources() {
     $expected_resources = [
-      'node' =>
-        [
-          'label' => 'Content',
-          'type' => 'content',
-          'methods' =>
-            [
-              'GET' => '/node/{node}',
-              'POST' => '/entity/node',
-              'PATCH' => '/node/{node}',
-              'DELETE' => '/node/{node}',
-            ],
-          'bundles' => ['page', 'resttest'],
-          'more' => '/entity/types/node/{bundle}',
-        ],
       'user' =>
         [
           'label' => 'User',
@@ -219,6 +212,20 @@ class ResourceDiscoveryTest extends RESTTestBase {
             ),
           'more' => 'entity/types/taxonomy_vocabulary',
         ),
+      'node' =>
+        [
+          'label' => 'Content',
+          'type' => 'content',
+          'methods' =>
+            [
+              'GET' => '/node/{node}',
+              'POST' => '/entity/node',
+              'PATCH' => '/node/{node}',
+              'DELETE' => '/node/{node}',
+            ],
+          'bundles' => ['page', 'resttest'],
+          'more' => '/entity/types/node/{bundle}',
+        ],
     ];
     return $expected_resources;
   }
@@ -764,51 +771,6 @@ class ResourceDiscoveryTest extends RESTTestBase {
       return $expected[$entity_type_id][$bundle_name];
     }
     throw new \Exception("Unknown resource: $entity_type_id:$bundle_name");
-  }
-
-  /**
-   * Enables the REST service interface for a specific entity type.
-   *
-   * @todo Remove this override if this is fixed in
-   *   https://www.drupal.org/node/2761087
-   *   Current core version disables all other services.
-   *
-   * @param string|FALSE $resource_type
-   *   The resource type that should get REST API enabled or FALSE to disable
-   *   all resource types.
-   * @param string $method
-   *   The HTTP method to enable, e.g. GET, POST etc.
-   * @param string|array $format
-   *   (Optional) The serialization format, e.g. hal_json, or a list of formats.
-   * @param array $auth
-   *   (Optional) The list of valid authentication methods.
-   */
-  protected function enableService($resource_type, $method = 'GET', $format = NULL, $auth = NULL) {
-    // Enable REST API for this entity type.
-    $config = $this->config('rest.settings');
-    $resources = [];
-
-    if ($resource_type) {
-      $resources = $config->get('resources');
-      $resources[$resource_type] = [];
-      if (is_array($format)) {
-        $resources[$resource_type][$method]['supported_formats'] = $format;
-      }
-      else {
-        if ($format == NULL) {
-          $format = 'json';
-        }
-        $resources[$resource_type][$method]['supported_formats'][] = $format;
-      }
-
-      if ($auth == NULL) {
-        $auth = $this->defaultAuth;
-      }
-      $resources[$resource_type][$method]['supported_auth'] = $auth;
-    }
-    $config->set('resources', $resources);
-    $config->save();
-    $this->rebuildCache();
   }
 
   /**
