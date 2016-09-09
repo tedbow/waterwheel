@@ -76,40 +76,4 @@ class EntityTypesListResource extends EntityTypeResourceBase {
     return $type_infos;
   }
 
-  /**
-   * Gets the REST methods and their paths for the entity type.
-   *
-   * @param string $entity_type_id
-   *   The entity type id.
-   *
-   * @return array
-   *   The REST methods.
-   *
-   *   The keys are the REST methods and the values are the paths.
-   */
-  protected function getEntityMethods($entity_type_id) {
-    $resource_methods = [];
-    $enabled_resources = \Drupal::config('rest.settings')->get('resources');
-    $entity_resource_key = "entity:$entity_type_id";
-    if (isset($enabled_resources[$entity_resource_key])) {
-      $enabled_methods = array_keys($enabled_resources[$entity_resource_key]);
-      /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $entity_resource */
-      $entity_resource = $this->resourceManager->createInstance($entity_resource_key);
-      /** @var \Symfony\Component\Routing\RouteCollection $routes */
-      $routes = $entity_resource->routes();
-
-      foreach ($enabled_methods as $method) {
-        /** @var \Symfony\Component\Routing\Route $route */
-        foreach ($routes as $route) {
-          if (in_array($method, $route->getMethods())) {
-            $resource_methods[$method] = $route->getPath();
-            break;
-          }
-        }
-      }
-    }
-
-    return $resource_methods;
-  }
-
 }
