@@ -12,6 +12,7 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\rest\Plugin\rest\resource\EntityResource;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -97,17 +98,14 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   protected function getPaths() {
     $api_paths = [];
     $resources = $this->manager->getDefinitions();
+    /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
+    $resource_configs = $this->entityTypeManager()->getStorage('rest_resource_config')->loadMultiple();
 
-    foreach ($resources as $id => $resource) {
+    foreach ($resource_configs as $id => $resource_config) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
-      $plugin = $this->manager->getInstance(array('id' => $id));
+      $resource_plugin = $resource_config->getResourcePlugin();
 
-      $resources = $this->config('rest.settings')->get('resources') ?: array();
-      $enabled_resources = array_intersect_key($resources, $this->manager->getDefinitions());
-      if (count($resources) != count($enabled_resources)) {
-        trigger_error('rest.settings lists resources relying on the following missing plugins: ' . implode(', ', array_keys(array_diff_key($resources, $enabled_resources))));
-      }
-      $routes = $plugin->routes();
+      $routes = $resource_plugin->routes();
       /** @var \Symfony\Component\Routing\Route $route */
       foreach ($routes as $route) {
 
@@ -124,12 +122,9 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
           $swagger_method = strtolower($method);
           $path_method_spec = [];
 
+          if ($resource_plugin instanceof EntityResource) {
 
-          $class = '\\' . $resource['class'];
-          if (!empty($resource['entity_type'])) {
-            /** @var \Drupal\rest\Plugin\rest\resource\EntityResource $plugin **/
-            $a = 'b';
-            $entity_type = $this->entityTypeManager->getDefinition($resource['entity_type']);
+            $entity_type = $this->entityTypeManager->getDefinition($resource_plugin->getPluginDefinition()['entity_type']);
             $path_method_spec = [
               'summary' => $this->t('@method a @entity_type', ['@method' => ucfirst($swagger_method), '@entity_type' => $entity_type->getLabel()]),
 
@@ -142,7 +137,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
               'summary' => 'boo',
             ];
           }
-          $path_method_spec['operationId'] = $resource['id'];
+          $path_method_spec['operationId'] = $resource_plugin->getPluginId();
           $api_paths[$path][$swagger_method] = $path_method_spec;
 
         }
