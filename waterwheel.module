@@ -1,1 +1,17 @@
 <?php
+
+/**
+ * @file
+ * Hooks.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function waterwheel_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#waterwheel':
+      return t('<p>Integrates with the Waterwheel-js libriary</p>');
+      break;
+  }
+}
