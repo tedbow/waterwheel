@@ -29,6 +29,9 @@ swagger_ui:
 swagger_ui_integration:
   js:
     js/swagger.js: {}
+  css:
+    theme:
+      css/swagger-ui.css: {}
   dependencies:
     - core/jquery
     - core/drupal
