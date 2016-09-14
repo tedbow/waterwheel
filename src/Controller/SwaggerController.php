@@ -246,6 +246,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         'name' => $var,
         'type' => 'string',
         'in' => 'path',
+        'default' => '',
       ];
     }
     return $parameters;
