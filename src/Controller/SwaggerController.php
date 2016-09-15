@@ -84,9 +84,10 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *   The info elements.
    */
   protected function getInfo() {
+    $site_name = $this->config('system.site')->get('name');
     return [
       'description' => '@todo update',
-      'title' => '@todo update title',
+      'title' => $this->t('@site - API', ['@site' => $site_name]),
     ];
   }
 
@@ -247,6 +248,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         'type' => 'string',
         'in' => 'path',
         'default' => '',
+        'required' => TRUE,
       ];
     }
     return $parameters;
