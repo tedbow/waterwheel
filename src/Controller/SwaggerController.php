@@ -4,13 +4,9 @@ namespace Drupal\waterwheel\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Routing\RouteMatch;
-use Drupal\Core\Routing\RouteProvider;
 use Drupal\rest\Plugin\rest\resource\EntityResource;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\RestResourceConfigInterface;
@@ -19,10 +15,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\SerializerInterface;
 
 /**
- * Routes for Swagger json spec and Swagger UI.
+ * Routes for Swagger json schema generator.
  */
 class SwaggerController extends ControllerBase implements ContainerInjectionInterface {
 
@@ -34,6 +29,8 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   protected $manager;
 
   /**
+   * The Field Manager.
+   *
    * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
   protected $fieldManager;
@@ -46,6 +43,8 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   protected $schemaFactory;
 
   /**
+   * The serializer.
+   *
    * @var \Symfony\Component\Serializer\SerializerInterface
    */
   protected $serializer;
@@ -58,10 +57,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
+   *   The field manager.
    * @param \Drupal\schemata\SchemaFactory $schema_factory
+   *   The schema factory.
+   * @param \Symfony\Component\Serializer\Serializer $serializer
+   *   The serializer.
    */
   public function __construct(ResourcePluginManager $manager, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, SchemaFactory $schema_factory, Serializer $serializer) {
-
     $this->manager = $manager;
     $this->entityTypeManager = $entity_type_manager;
     $this->fieldManager = $field_manager;
@@ -85,12 +87,15 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Output Swagger compatible API spec.
    *
-   * @param null $entity_type
-   * @param null $bundle_name
+   * @param string $entity_type
+   *   The entity type.
+   * @param string $bundle_name
+   *   The bundle.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The JSON Response.
    */
-  public function swaggerAPI($entity_type = NULL, $bundle_name = NULL) {
+  public function swaggerApi($entity_type = NULL, $bundle_name = NULL) {
     $spec = [
       'swagger' => "2.0",
       'schemes' => ['http'],
@@ -100,12 +105,9 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       'basePath' => \Drupal::request()->getBasePath(),
       'definitions' => $this->getDefinitions($entity_type, $bundle_name),
       'securityDefinitions' => $this->getSecurityDefinitions(),
-
-
     ];
     $response = new JsonResponse($spec);
     return $response;
-
   }
 
   /**
@@ -125,13 +127,18 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Returns the paths information.
    *
-   * @return array
-   *   The info elements.
+   * @param string $entity_type
+   *   The entity type.
+   * @param string $bundle_name
+   *   The bundle.
+   *
+   * @return array The info elements.
+   *    The info elements.
    */
   protected function getPaths($entity_type = NULL, $bundle_name = NULL) {
     $api_paths = [];
     /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
-    $resource_configs = $this->getResourceConfigs($entity_type, $bundle_name);
+    $resource_configs = $this->getResourceConfigs($entity_type);
 
     foreach ($resource_configs as $id => $resource_config) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
@@ -184,9 +191,14 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Get parameters for an entity type.
    *
    * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
-   * @param $method
+   *   The entity type.
+   * @param string $method
+   *   The HTTP method.
+   * @param string $bundle_name
+   *   The bundle name.
    *
-   * @return array
+   * @return array Parameters for the entity resource.
+   *    Parameters for the entity resource.
    */
   protected function getEntityParameters(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
     $parameters = [];
@@ -213,84 +225,21 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         'in' => 'body',
         'type' => 'body',
         'schema' => [
-          '$ref' => "#/definitions/$definition_key"
+          '$ref' => "#/definitions/$definition_key",
         ],
-
       ];
-      /*
-      if ($entity_type instanceof ContentEntityTypeInterface) {
-        $base_fields = $this->fieldManager->getBaseFieldDefinitions($entity_type->id());
-        foreach ($base_fields as $field_name => $base_field) {
-          $parameters[] = $this->getSwaggerFieldParameter($base_field);
-        }
-      }
-      */
     }
     return $parameters;
-  }
-
-  /**
-   * Gets the a Swagger parameter for a field.
-   *
-   * @param \Drupal\Core\Field\FieldDefinitionInterface $field
-   *
-   * @return array
-   */
-  protected function getSwaggerFieldParameter(FieldDefinitionInterface $field) {
-    $parameter = [
-      'name' => $field->getName(),
-      'required' => $field->isRequired(),
-    ];
-    $type = $field->getType();
-    $date_types = ['changed', 'created'];
-    if (in_array($type, $date_types)) {
-      $parameter['type'] = 'string';
-      $parameter['format'] = 'date-time';
-    }
-    else {
-      $string_types = ['string_long', 'uuid'];
-      if (in_array($type, $string_types)) {
-        $parameter['type'] = 'string';
-      }
-    }
-    $parameter['default'] = '';
-    return $parameter;
-
-  }
-
-  /**
-   * The Swagger UI page.
-   *
-   * @return array
-   */
-  public function swaggerUiPage($entity_type = NULL, $bundle_name = NULL) {
-    $build = [
-      '#theme' => 'swagger_ui',
-      '#attached' => [
-        'library' => [
-          'waterwheel/swagger_ui_integration',
-          'waterwheel/swagger_ui',
-        ],
-        'drupalSettings' => [
-          'waterwheel' => [
-            'swagger_ui' => [
-              'entity_type' => $entity_type,
-              'bundle_name' => $bundle_name,
-            ],
-          ],
-        ],
-      ],
-    ];
-
-    return $build;
   }
 
   /**
    * Get Swagger parameters for a route.
    *
    * @param \Symfony\Component\Routing\Route $route
+   *   The route.
    *
    * @return array
+   *   The resource parameters.
    */
   protected function getRouteParameters(Route $route) {
     $parameters = [];
@@ -310,10 +259,16 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Gets the matching for route for the resource and method.
    *
-   * @param $resource_config
-   * @param $method
+   * @param \Drupal\rest\RestResourceConfigInterface $resource_config
+   *   The REST config resource.
+   * @param string $method
+   *   The HTTP method.
    *
    * @return \Symfony\Component\Routing\Route
+   *    The route.
+   *
+   * @throws \Exception
+   *   If no route is found.
    */
   protected function getRouteForResourceMethod(RestResourceConfigInterface $resource_config, $method) {
     if ($this->isEntityResource($resource_config)) {
@@ -349,12 +304,17 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Get the security information for the a resource.
    *
-   * @see http://swagger.io/specification/#securityDefinitionsObject
-   *
    * @param \Drupal\rest\RestResourceConfigInterface $resource_config
-   * @param $method
+   *   The REST resource.
+   * @param string $method
+   *   The HTTP method.
+   * @param string[] $formats
+   *   The formats.
    *
-   * @return array
+   * @return array The security elements.
+   *    The security elements.
+   *
+   * @see http://swagger.io/specification/#securityDefinitionsObject
    */
   protected function getSecurity(RestResourceConfigInterface $resource_config, $method, $formats) {
     $security = [];
@@ -383,18 +343,27 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         if ($route->getRequirement('_csrf_request_header_token')) {
           $security[] = 'csrf_token';
         }
-
       }
     }
-
     return $security;
   }
 
+  /**
+   * Get model definitions for Drupal entities and bundles.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle_name
+   *   The bundle name.
+   *
+   * @return array
+   *   The model definitions.
+   */
   private function getDefinitions($entity_type_id = NULL, $bundle_name = NULL) {
     $entity_types = $this->getRestEnabledEntityTypes($entity_type_id);
     $definitions = [];
     foreach ($entity_types as $entity_id => $entity_type) {
-      $entity_schema = $this->getJSONSchema($entity_id);
+      $entity_schema = $this->getJsonSchema($entity_id);
       $definitions[$entity_id] = $entity_schema;
       $bundle_type = $entity_type->getBundleEntityType();
       $bundle_storage = $this->entityTypeManager()->getStorage($bundle_type);
@@ -405,7 +374,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         $bundles = $bundle_storage->loadMultiple();
       }
       foreach ($bundles as $bundle_name => $bundle) {
-        $bundle_schema = $this->getJSONSchema($entity_id, $bundle_name);
+        $bundle_schema = $this->getJsonSchema($entity_id, $bundle_name);
         foreach ($entity_schema['properties'] as $property_id => $property) {
 
         }
@@ -418,16 +387,25 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Determines if an REST resource is for an entity.
    *
-   * @param $resource_config
+   * @param \Drupal\rest\RestResourceConfigInterface $resource_config
+   *    The REST config resource.
    *
    * @return bool
+   *   True if the resource represents a Drupal entity.
    */
   protected function isEntityResource(RestResourceConfigInterface $resource_config) {
     $resource_plugin = $resource_config->getResourcePlugin();
     return $resource_plugin instanceof EntityResource;
   }
 
+  /**
+   * Gets available security definitions.
+   *
+   * @return array
+   *   The security definitions.
+   */
   protected function getSecurityDefinitions() {
+    // @todo Determine definitions from available auth.
     return [
       'csrf_token' => [
         'type' => 'apiKey',
@@ -437,17 +415,20 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       'basic_auth' => [
         'type' => 'basic',
       ],
-
     ];
   }
 
   /**
-   * Remove nulls
+   * Cleans JSON schema definitions for Swagger.
    *
-   * @todo Just to test if fixes.
-   * https://github.com/OAI/OpenAPI-Specification/issues/229
+   * @todo Just to test if fixes
+   *       https://github.com/OAI/OpenAPI-Specification/issues/229
    *
    * @param array $json_schema
+   *   The JSON Schema elements.
+   *
+   * @return array
+   *   The cleaned JSON Schema elements.
    */
   private function cleanSchema($json_schema) {
     foreach ($json_schema as $key => &$value) {
@@ -466,8 +447,11 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Gets entity types that are enabled for rest.
    *
-   * @return \Drupal\Core\Entity\EntityTypeInterface[]
-   *   Entity types that are enabled.
+   * @param string $entity_type_id
+   *   The entity type id.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeInterface[] Entity types that are enabled.
+   *    Entity types that are enabled.
    */
   protected function getRestEnabledEntityTypes($entity_type_id = NULL) {
     $entity_types = [];
@@ -484,9 +468,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   }
 
   /**
+   * Gets the entity type if any for REST resource.
+   *
    * @param \Drupal\rest\RestResourceConfigInterface $resource_config
+   *    The REST config resource.
    *
    * @return \Drupal\Core\Entity\EntityTypeInterface|null
+   *   The Entity Type or null.
    */
   protected function getEntityType(RestResourceConfigInterface $resource_config) {
     if ($this->isEntityResource($resource_config)) {
@@ -497,27 +485,38 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   }
 
   /**
-   * @param $entity_id
-   * @param $bundle_name
+   * Gets the JSON Schema for an entity type or entity type and bundle.
    *
-   * @return array|bool|float|int|null|object|string
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle_name
+   *   The bundle name.
+   *
+   * @return array
+   *   The JSON schema.
    */
-  protected function getJSONSchema($entity_id, $bundle_name = NULL) {
-    $schema = $this->schemaFactory->create($entity_id, $bundle_name);
+  protected function getJsonSchema($entity_type_id, $bundle_name = NULL) {
+    $schema = $this->schemaFactory->create($entity_type_id, $bundle_name);
 
     $json_schema = $this->serializer->normalize($schema, 'json_schema');
     unset($json_schema['$schema'], $json_schema['id']);
     $json_schema = $this->cleanSchema($json_schema);
     if (!$bundle_name) {
       // Add discriminator field.
-      $entity_type = $this->entityTypeManager()->getDefinition($entity_id);
+      $entity_type = $this->entityTypeManager()->getDefinition($entity_type_id);
       $json_schema['discriminator'] = $entity_type->getKey('bundle');
     }
     return $json_schema;
   }
 
   /**
-   * @return \Drupal\Core\Entity\EntityInterface[]
+   * Gets the REST config resources.
+   *
+   * @param string $entity_type
+   *   The entity type to filter by if any.
+   *
+   * @return \Drupal\rest\RestResourceConfigInterface[]
+   *   The REST config resources.
    */
   protected function getResourceConfigs($entity_type = NULL) {
     if ($entity_type) {
@@ -529,7 +528,6 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         ->getStorage('rest_resource_config')
         ->loadMultiple();
     }
-
     return $resource_configs;
   }
 
