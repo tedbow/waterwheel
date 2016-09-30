@@ -19,7 +19,7 @@ waterwheel.swagger.bundle:
 waterwheel.swaggerUI:
   path: '/water-wheel/swagger-ui'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerUiPage'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::swaggerUiPage'
   methods: [GET]
   requirements:
     _access: 'TRUE'
@@ -27,7 +27,7 @@ waterwheel.swaggerUI:
 waterwheel.swaggerUI.bundle:
   path: '/water-wheel/swagger-ui/{entity_type}/{bundle_name}'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerUiPage'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::swaggerUiPage'
   methods: [GET]
   requirements:
     _access: 'TRUE'
