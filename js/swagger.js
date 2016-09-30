@@ -12,7 +12,13 @@
 
   Drupal.behaviors.AJAX = {
     attach: function (context, settings) {
-      var url = Drupal.url('water-wheel/swagger?_format=json');
+      var url = 'water-wheel/swagger';
+      if (drupalSettings.waterwheel.swagger_ui.entity_type) {
+        url += '/' + drupalSettings.waterwheel.swagger_ui.entity_type;
+        url += '/' + drupalSettings.waterwheel.swagger_ui.bundle_name;
+      }
+      url = Drupal.url(url + '?_format=json');
+
 
       /*
        hljs.configure({

@@ -84,16 +84,21 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
 
   /**
    * Output Swagger compatible API spec.
+   *
+   * @param null $entity_type
+   * @param null $bundle_name
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
    */
-  public function swaggerAPI() {
+  public function swaggerAPI($entity_type = NULL, $bundle_name = NULL) {
     $spec = [
       'swagger' => "2.0",
       'schemes' => ['http'],
       'info' => $this->getInfo(),
-      'paths' => $this->getPaths(),
+      'paths' => $this->getPaths($entity_type, $bundle_name),
       'host' => \Drupal::request()->getHost(),
       'basePath' => \Drupal::request()->getBasePath(),
-      'definitions' => $this->getDefinitions(),
+      'definitions' => $this->getDefinitions($entity_type, $bundle_name),
       'securityDefinitions' => $this->getSecurityDefinitions(),
 
 
@@ -123,12 +128,10 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @return array
    *   The info elements.
    */
-  protected function getPaths() {
+  protected function getPaths($entity_type = NULL, $bundle_name = NULL) {
     $api_paths = [];
     /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
-    $resource_configs = $this->entityTypeManager()
-      ->getStorage('rest_resource_config')
-      ->loadMultiple();
+    $resource_configs = $this->getResourceConfigs($entity_type, $bundle_name);
 
     foreach ($resource_configs as $id => $resource_config) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
@@ -151,7 +154,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
           $path_method_spec['parameters'][] = $format_parameter;
           if ($this->isEntityResource($resource_config)) {
 
-            $entity_type = $this->entityTypeManager->getDefinition($resource_plugin->getPluginDefinition()['entity_type']);
+            $entity_type = $this->getEntityType($resource_config);
             $path_method_spec['summary'] = $this->t('@method a @entity_type', [
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
@@ -159,7 +162,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
 
             $path_method_spec['consumes'] = ['application/json'];
             $path_method_spec['produces'] = ['application/json'];
-            $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method));
+            $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method, $bundle_name));
 
           }
           else {
@@ -185,7 +188,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *
    * @return array
    */
-  protected function getEntityParameters(EntityTypeInterface $entity_type, $method) {
+  protected function getEntityParameters(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
     $parameters = [];
     if (in_array($method, ['GET', 'DELETE', 'PATCH'])) {
       $keys = $entity_type->getKeys();
@@ -201,12 +204,16 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       ];
     }
     if (in_array($method, ['POST', 'PATCH'])) {
+      $definition_key = $entity_type->id();
+      if ($bundle_name) {
+        $definition_key .= ".$bundle_name";
+      }
       $parameters[] = [
         'name' => 'body',
         'in' => 'body',
         'type' => 'body',
         'schema' => [
-          '$ref' => '#/definitions/node'
+          '$ref' => "#/definitions/$definition_key"
         ],
 
       ];
@@ -256,13 +263,21 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *
    * @return array
    */
-  public function swaggerUiPage() {
+  public function swaggerUiPage($entity_type = NULL, $bundle_name = NULL) {
     $build = [
       '#theme' => 'swagger_ui',
       '#attached' => [
         'library' => [
           'waterwheel/swagger_ui_integration',
           'waterwheel/swagger_ui',
+        ],
+        'drupalSettings' => [
+          'waterwheel' => [
+            'swagger_ui' => [
+              'entity_type' => $entity_type,
+              'bundle_name' => $bundle_name,
+            ],
+          ],
         ],
       ],
     ];
@@ -375,13 +390,29 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return $security;
   }
 
-  private function getDefinitions() {
-    $schema = $this->schemaFactory->create('node');
-    $json_schema = $this->serializer->normalize($schema, 'json_schema');
-    unset($json_schema['$schema'], $json_schema['id']);
-    return [
-      'node' => $json_schema,
-    ];
+  private function getDefinitions($entity_type_id = NULL, $bundle_name = NULL) {
+    $entity_types = $this->getRestEnabledEntityTypes($entity_type_id);
+    $definitions = [];
+    foreach ($entity_types as $entity_id => $entity_type) {
+      $entity_schema = $this->getJSONSchema($entity_id);
+      $definitions[$entity_id] = $entity_schema;
+      $bundle_type = $entity_type->getBundleEntityType();
+      $bundle_storage = $this->entityTypeManager()->getStorage($bundle_type);
+      if ($bundle_name) {
+        $bundles[$bundle_name] = $bundle_storage->load($bundle_name);
+      }
+      else {
+        $bundles = $bundle_storage->loadMultiple();
+      }
+      foreach ($bundles as $bundle_name => $bundle) {
+        $bundle_schema = $this->getJSONSchema($entity_id, $bundle_name);
+        foreach ($entity_schema['properties'] as $property_id => $property) {
+
+        }
+        $definitions["$entity_id.$bundle_name"] = $bundle_schema;
+      }
+    }
+    return $definitions;
   }
 
   /**
@@ -408,6 +439,98 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       ],
 
     ];
+  }
+
+  /**
+   * Remove nulls
+   *
+   * @todo Just to test if fixes.
+   * https://github.com/OAI/OpenAPI-Specification/issues/229
+   *
+   * @param array $json_schema
+   */
+  private function cleanSchema($json_schema) {
+    foreach ($json_schema as $key => &$value) {
+      if ($value === NULL) {
+        $value = '';
+      }
+      else {
+        if (is_array($value)) {
+          $value = $this->cleanSchema($value);
+        }
+      }
+    }
+    return $json_schema;
+  }
+
+  /**
+   * Gets entity types that are enabled for rest.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeInterface[]
+   *   Entity types that are enabled.
+   */
+  protected function getRestEnabledEntityTypes($entity_type_id = NULL) {
+    $entity_types = [];
+    $resource_configs = $this->getResourceConfigs();
+
+    foreach ($resource_configs as $id => $resource_config) {
+      if ($entity_type = $this->getEntityType($resource_config)) {
+        if (!$entity_type_id || $entity_type->id() == $entity_type_id) {
+          $entity_types[$entity_type->id()] = $entity_type;
+        }
+      }
+    }
+    return $entity_types;
+  }
+
+  /**
+   * @param \Drupal\rest\RestResourceConfigInterface $resource_config
+   *
+   * @return \Drupal\Core\Entity\EntityTypeInterface|null
+   */
+  protected function getEntityType(RestResourceConfigInterface $resource_config) {
+    if ($this->isEntityResource($resource_config)) {
+      $resource_plugin = $resource_config->getResourcePlugin();
+      return $this->entityTypeManager->getDefinition($resource_plugin->getPluginDefinition()['entity_type']);
+    }
+    return NULL;
+  }
+
+  /**
+   * @param $entity_id
+   * @param $bundle_name
+   *
+   * @return array|bool|float|int|null|object|string
+   */
+  protected function getJSONSchema($entity_id, $bundle_name = NULL) {
+    $schema = $this->schemaFactory->create($entity_id, $bundle_name);
+
+    $json_schema = $this->serializer->normalize($schema, 'json_schema');
+    unset($json_schema['$schema'], $json_schema['id']);
+    $json_schema = $this->cleanSchema($json_schema);
+    if (!$bundle_name) {
+      // Add discriminator field.
+      $entity_type = $this->entityTypeManager()->getDefinition($entity_id);
+      $json_schema['discriminator'] = $entity_type->getKey('bundle');
+    }
+    return $json_schema;
+  }
+
+  /**
+   * @return \Drupal\Core\Entity\EntityInterface[]
+   */
+  protected function getResourceConfigs($entity_type = NULL) {
+    if ($entity_type) {
+      $resource_configs[] = $this->entityTypeManager()
+        ->getStorage('rest_resource_config')->load("entity.$entity_type");
+    }
+    else {
+      $resource_configs = $this->entityTypeManager()
+        ->getStorage('rest_resource_config')
+        ->loadMultiple();
+    }
+
+    return $resource_configs;
   }
 
 }

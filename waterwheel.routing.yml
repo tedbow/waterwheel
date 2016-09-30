@@ -7,8 +7,25 @@ waterwheel.swagger:
     _access: 'TRUE'
     _format: 'json'
 
+waterwheel.swagger.bundle:
+  path: '/water-wheel/swagger/{entity_type}/{bundle_name}'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerAPI'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+    _format: 'json'
+
 waterwheel.swaggerUI:
   path: '/water-wheel/swagger-ui'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerUiPage'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+
+waterwheel.swaggerUI.bundle:
+  path: '/water-wheel/swagger-ui/{entity_type}/{bundle_name}'
   defaults:
     _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerUiPage'
   methods: [GET]
