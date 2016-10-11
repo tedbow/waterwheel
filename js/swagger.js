@@ -12,14 +12,7 @@
 
   Drupal.behaviors.AJAX = {
     attach: function (context, settings) {
-      var url = 'water-wheel/swagger';
-      if (drupalSettings.waterwheel.swagger_ui.entity_type) {
-        url += '/' + drupalSettings.waterwheel.swagger_ui.entity_type;
-        url += '/' + drupalSettings.waterwheel.swagger_ui.bundle_name;
-      }
-      url = Drupal.url(url + '?_format=json');
-
-
+      var url = drupalSettings.waterwheel.swagger_json_url;
       /*
        hljs.configure({
        highlightSizeThreshold: 5000

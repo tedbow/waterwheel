@@ -95,17 +95,12 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    *   The JSON Response.
    */
-  public function swaggerApi($entity_type = NULL, $bundle_name = NULL) {
-    $spec = [
-      'swagger' => "2.0",
-      'schemes' => ['http'],
-      'info' => $this->getInfo(),
-      'paths' => $this->getPaths($entity_type, $bundle_name),
-      'host' => \Drupal::request()->getHost(),
-      'basePath' => \Drupal::request()->getBasePath(),
-      'definitions' => $this->getDefinitions($entity_type, $bundle_name),
-      'securityDefinitions' => $this->getSecurityDefinitions(),
-    ];
+  public function bundleJson($entity_type = NULL, $bundle_name = NULL) {
+    /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
+    $resource_configs = $this->getResourceConfigs($entity_type);
+    $spec = $this->getSpecification($resource_configs, $bundle_name);
+    // Add model definitions.
+    $spec['definitions'] = $this->getDefinitions($entity_type, $bundle_name);
     $response = new JsonResponse($spec);
     return $response;
   }
@@ -127,19 +122,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Returns the paths information.
    *
-   * @param string $entity_type
-   *   The entity type.
-   * @param string $bundle_name
-   *   The bundle.
+   * @param \Drupal\rest\RestResourceConfigInterface[] $resource_configs
    *
    * @return array The info elements.
    *    The info elements.
    */
-  protected function getPaths($entity_type = NULL, $bundle_name = NULL) {
+  protected function getPaths(array $resource_configs, $bundle_name) {
     $api_paths = [];
-    /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
-    $resource_configs = $this->getResourceConfigs($entity_type);
-
     foreach ($resource_configs as $id => $resource_config) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
       $resource_plugin = $resource_config->getResourcePlugin();
@@ -166,9 +155,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
             ]);
+            foreach ($formats as $format) {
+              $path_method_spec['consumes'][] = "$format";
+              $path_method_spec['produces'][] = "$format";
+            }
+            $path_method_spec['consumes'][] = 'xml';
 
-            $path_method_spec['consumes'] = ['application/json'];
-            $path_method_spec['produces'] = ['application/json'];
+
             $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method, $bundle_name));
 
           }
@@ -398,6 +391,22 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return $resource_plugin instanceof EntityResource;
   }
 
+  public function nonEntityResourcesJson() {
+    /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
+    $resource_configs = $this->entityTypeManager()
+      ->getStorage('rest_resource_config')
+      ->loadMultiple();
+    $non_entity_configs = [];
+    foreach ($resource_configs as $resource_config) {
+      if (!$this->isEntityResource($resource_config)) {
+        $non_entity_configs[] = $resource_config;
+      }
+    }
+    $spec = $this->getSpecification($non_entity_configs);
+    $response = new JsonResponse($spec);
+    return $response;
+  }
+
   /**
    * Gets available security definitions.
    *
@@ -529,6 +538,25 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         ->loadMultiple();
     }
     return $resource_configs;
+  }
+
+  /**
+   * @param \Drupal\rest\RestResourceConfigInterface[] $rest_configs
+   *
+   * @return array
+   *
+   */
+  protected function getSpecification(array $rest_configs, $bundle_name = NULL) {
+    $spec = [
+      'swagger' => "2.0",
+      'schemes' => ['http'],
+      'info' => $this->getInfo(),
+      'paths' => $this->getPaths($rest_configs, $bundle_name),
+      'host' => \Drupal::request()->getHost(),
+      'basePath' => \Drupal::request()->getBasePath(),
+      'securityDefinitions' => $this->getSecurityDefinitions(),
+    ];
+    return $spec;
   }
 
 }

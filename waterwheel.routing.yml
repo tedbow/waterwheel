@@ -1,7 +1,7 @@
-waterwheel.swagger:
-  path: '/water-wheel/swagger'
+waterwheel.swagger.non_entity:
+  path: '/water-wheel/swagger/non-entity'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerAPI'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::nonEntityResourcesJson'
   methods: [GET]
   requirements:
     _access: 'TRUE'
@@ -10,16 +10,25 @@ waterwheel.swagger:
 waterwheel.swagger.bundle:
   path: '/water-wheel/swagger/{entity_type}/{bundle_name}'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerController::swaggerAPI'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::bundleJson'
   methods: [GET]
   requirements:
     _access: 'TRUE'
     _format: 'json'
 
-waterwheel.swaggerUI:
-  path: '/water-wheel/swagger-ui'
+waterwheel.swaggerUI.overview:
+  path: '/water-wheel/swagger-ui/overview'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::swaggerUiPage'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::overview'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+
+
+waterwheel.swaggerUI.non_entity:
+  path: '/water-wheel/swagger-ui/non-entity'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::nonEntityResources'
   methods: [GET]
   requirements:
     _access: 'TRUE'
@@ -27,7 +36,7 @@ waterwheel.swaggerUI:
 waterwheel.swaggerUI.bundle:
   path: '/water-wheel/swagger-ui/{entity_type}/{bundle_name}'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::swaggerUiPage'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::bundleResource'
   methods: [GET]
   requirements:
     _access: 'TRUE'
