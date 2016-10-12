@@ -85,6 +85,28 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   }
 
   /**
+   * Return Open API Spec for all entity resources.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   */
+  public function entityResourcesJson() {
+    /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
+    $resource_configs = $this->entityTypeManager()
+      ->getStorage('rest_resource_config')
+      ->loadMultiple();
+    $entity_configs = [];
+    foreach ($resource_configs as $resource_config) {
+      if ($this->isEntityResource($resource_config)) {
+        $entity_configs[] = $resource_config;
+      }
+    }
+    $spec = $this->getSpecification($entity_configs);
+    $spec['definitions'] = $this->getDefinitions();
+    $response = new JsonResponse($spec);
+    return $response;
+  }
+
+  /**
    * Output Swagger compatible API spec.
    *
    * @param string $entity_type
@@ -124,10 +146,12 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *
    * @param \Drupal\rest\RestResourceConfigInterface[] $resource_configs
    *
+   * @param string $bundle_name
+   *
    * @return array The info elements.
    *    The info elements.
    */
-  protected function getPaths(array $resource_configs, $bundle_name) {
+  protected function getPaths(array $resource_configs, $bundle_name = NULL) {
     $api_paths = [];
     foreach ($resource_configs as $id => $resource_config) {
       /** @var \Drupal\rest\Plugin\ResourceBase $plugin */
@@ -160,7 +184,6 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
               $path_method_spec['produces'][] = "$format";
             }
             $path_method_spec['consumes'][] = 'xml';
-
 
             $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method, $bundle_name));
 
@@ -391,6 +414,11 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return $resource_plugin instanceof EntityResource;
   }
 
+  /**
+   * Return resources for non-entity resources.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   */
   public function nonEntityResourcesJson() {
     /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
     $resource_configs = $this->entityTypeManager()
@@ -541,10 +569,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   }
 
   /**
+   * Get the Open API specification array.
+   *
    * @param \Drupal\rest\RestResourceConfigInterface[] $rest_configs
    *
-   * @return array
+   * @param string $bundle_name
    *
+   * @return array
    */
   protected function getSpecification(array $rest_configs, $bundle_name = NULL) {
     $spec = [
