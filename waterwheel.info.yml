@@ -5,3 +5,4 @@ core: 8.x
 package: Waterwheel
 dependencies:
   - rest (>= 8.2)
+  - schemata

@@ -1,3 +1,12 @@
+waterwheel.swagger.entities:
+  path: '/water-wheel/swagger/entities'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::entityResourcesJson'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+    _format: 'json'
+
 waterwheel.swagger.non_entity:
   path: '/water-wheel/swagger/non-entity'
   defaults:
