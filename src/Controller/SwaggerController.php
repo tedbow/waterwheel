@@ -181,7 +181,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
 
           if ($this->isEntityResource($resource_config)) {
             $entity_type = $this->getEntityType($resource_config);
-            $path_method_spec['tags'][] = $entity_type->id();
+            $path_method_spec['tags'][] = $this->getBundleTags($entity_type);
             $path_method_spec['summary'] = $this->t('@method a @entity_type', [
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
@@ -724,8 +724,8 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
   /**
    * Fix default field value as zero instead of FALSE.
    *
-   * @param $value
-   *  JSON Schema field value.
+   * @param array $value
+   *   JSON Schema field value.
    */
   protected function fixDefaultFalse(&$value) {
     if (isset($value['type']) && $value['type'] == 'array'
@@ -739,6 +739,24 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         }
       }
     }
+  }
+
+  /**
+   * Get bundle tags for an entity type.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *   The entity type.
+   *
+   * @return array
+   *   Bundle tags.
+   */
+  protected function getBundleTags(EntityTypeInterface $entity_type) {
+    $bundle_storage = $this->entityTypeManager->getStorage($entity_type->getBundleEntityType());
+    $tags = [];
+    foreach ($bundle_storage->loadMultiple() as $bundle_name => $bundle_entity) {
+      $tags[] = $this->getEntityDefinitionKey($entity_type, $bundle_name);
+    }
+    return $tags;
   }
 
 }
