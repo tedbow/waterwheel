@@ -181,7 +181,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
 
           if ($this->isEntityResource($resource_config)) {
             $entity_type = $this->getEntityType($resource_config);
-            $path_method_spec['tags'][] = $this->getBundleTags($entity_type);
+            $path_method_spec['tags'] = $this->getBundleTags($entity_type);
             $path_method_spec['summary'] = $this->t('@method a @entity_type', [
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
