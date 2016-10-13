@@ -88,6 +88,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Return Open API Spec for all entity resources.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The Json Response.
    */
   public function entityResourcesJson() {
     /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
@@ -138,6 +139,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return [
       'description' => '@todo update',
       'title' => $this->t('@site - API', ['@site' => $site_name]),
+      'version' => 'No API version',
     ];
   }
 
@@ -165,16 +167,21 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
           $format_parameter = [
             'name' => '_format',
             'in' => 'query',
+            'type' => 'string',
             'enum' => $formats,
             'required' => TRUE,
+            'description' => 'Request format',
           ];
           if (count($formats) == 1) {
             $format_parameter['default'] = $formats[0];
           }
           $path_method_spec['parameters'][] = $format_parameter;
-          if ($this->isEntityResource($resource_config)) {
 
+          $path_method_spec['responses'] = $this->getErrorResponses();
+
+          if ($this->isEntityResource($resource_config)) {
             $entity_type = $this->getEntityType($resource_config);
+            $path_method_spec['tags'][] = $entity_type->id();
             $path_method_spec['summary'] = $this->t('@method a @entity_type', [
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
@@ -183,17 +190,19 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
               $path_method_spec['consumes'][] = "$format";
               $path_method_spec['produces'][] = "$format";
             }
-            $path_method_spec['consumes'][] = 'xml';
 
             $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method, $bundle_name));
-
+            $path_method_spec['responses'] = $this->getEntityResponses($entity_type, $method, $bundle_name) + $path_method_spec['responses'];
           }
           else {
+            $path_method_spec['responses']['200'] = [
+              'description' => 'successful operation',
+            ];
             $path_method_spec['summary'] = $resource_plugin->getPluginDefinition()['label'];
             $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getRouteParameters($route));
-          }
 
-          $path_method_spec['operationId'] = $resource_plugin->getPluginId();
+          }
+          $path_method_spec['operationId'] = $resource_plugin->getPluginId() . ":" . $method;
           $path_method_spec['schemes'] = ['http'];
           $path_method_spec['security'] = $this->getSecurity($resource_config, $method, $formats);
           $api_paths[$path][$swagger_method] = $path_method_spec;
@@ -220,28 +229,27 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     $parameters = [];
     if (in_array($method, ['GET', 'DELETE', 'PATCH'])) {
       $keys = $entity_type->getKeys();
+      $key_field = $this->fieldManager->getFieldStorageDefinitions($entity_type->id())[$keys['id']];
+
       $parameters[] = [
         'name' => $entity_type->id(),
         'in' => 'path',
         'required' => TRUE,
-        'default' => '',
-        'description' => $this->t('The @id(id) of the @type.', [
+        'type' => $key_field->getType(),
+        'description' => $this->t('The @id,id, of the @type.', [
           '@id' => $keys['id'],
           '@type' => $entity_type->id(),
         ]),
       ];
     }
     if (in_array($method, ['POST', 'PATCH'])) {
-      $definition_key = $entity_type->id();
-      if ($bundle_name) {
-        $definition_key .= ".$bundle_name";
-      }
       $parameters[] = [
         'name' => 'body',
         'in' => 'body',
-        'type' => 'body',
+        'description' => $this->t('The @label object', ['@label' => $entity_type->getLabel()]),
+        'required' => TRUE,
         'schema' => [
-          '$ref' => "#/definitions/$definition_key",
+          '$ref' => '#/definitions/' . $this->getEntityDefinitionKey($entity_type, $bundle_name),
         ],
       ];
     }
@@ -265,7 +273,6 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         'name' => $var,
         'type' => 'string',
         'in' => 'path',
-        'default' => '',
         'required' => TRUE,
       ];
     }
@@ -337,7 +344,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     foreach ($resource_config->getAuthenticationProviders($method) as $auth) {
       switch ($auth) {
         case 'basic_auth':
-          $security[] = 'basic_auth';
+          $security[] = ['basic_auth' => []];
       }
     }
     // @todo Handle tokens that need to be set in headers.
@@ -357,7 +364,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         $route = array_pop($routes);
         // Check to see if route is protected by access checks in header.
         if ($route->getRequirement('_csrf_request_header_token')) {
-          $security[] = 'csrf_token';
+          $security[] = ['csrf_token' => []];
         }
       }
     }
@@ -394,7 +401,18 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         foreach ($entity_schema['properties'] as $property_id => $property) {
 
         }
-        $definitions["$entity_id.$bundle_name"] = $bundle_schema;
+        // Use Open API polymorphism support to show that bundles extend entity type.
+        // Should base fields be removed from bundle schema.
+        // Can base fields could be different from entity type base fields?
+        // @see hook_entity_bundle_field_info().
+        // @see https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#models-with-polymorphism-support
+        $definitions[$this->getEntityDefinitionKey($entity_type, $bundle_name)] = [
+          'allOf' => [
+            ['$ref' => "#/definitions/$entity_id"],
+            $bundle_schema,
+          ],
+        ];
+
       }
     }
     return $definitions;
@@ -474,6 +492,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       }
       else {
         if (is_array($value)) {
+          $this->fixDefaultFalse($value);
           $value = $this->cleanSchema($value);
         }
       }
@@ -572,7 +591,6 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Get the Open API specification array.
    *
    * @param \Drupal\rest\RestResourceConfigInterface[] $rest_configs
-   *
    * @param string $bundle_name
    *
    * @return array
@@ -586,8 +604,141 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       'host' => \Drupal::request()->getHost(),
       'basePath' => \Drupal::request()->getBasePath(),
       'securityDefinitions' => $this->getSecurityDefinitions(),
+      'tags' => $this->getTags(),
     ];
     return $spec;
+  }
+
+  /**
+   * Get possible responses for an entity type.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   * @param string $method
+   * @param string $bundle_name
+   *
+   * @return array
+   */
+  private function getEntityResponses(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
+    $responses = [];
+    $definition_ref = '#/definitions/' . $this->getEntityDefinitionKey($entity_type, $bundle_name);
+    switch ($method) {
+      case 'GET':
+        $responses['200'] = [
+          'description' => 'successful operation',
+          'schema' => [
+            '$ref' => $definition_ref,
+          ],
+        ];
+        break;
+
+      case 'POST':
+        unset($responses['200']);
+        $responses['201'] = [
+          'description' => 'Entity created',
+          'schema' => [
+            '$ref' => $definition_ref,
+          ],
+        ];
+        break;
+
+      case 'DELETE':
+        unset($responses['200']);
+        $responses['201'] = [
+          'description' => 'Entity deleted',
+        ];
+        break;
+    }
+    return $responses;
+  }
+
+  /**
+   * Gets the entity definition key.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   * @param $bundle_name
+   *
+   * @return string
+   */
+  protected function getEntityDefinitionKey(EntityTypeInterface $entity_type, $bundle_name) {
+    $definition_key = $entity_type->id();
+    if ($bundle_name) {
+      $definition_key .= ":$bundle_name";
+      return $definition_key;
+    }
+    return $definition_key;
+  }
+
+  /**
+   * Get the error responses.
+   *
+   * @see https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#responseObject
+   *
+   * @return array
+   *   Keys are http codes. Values responses.
+   */
+  protected function getErrorResponses() {
+    $responses['400'] = [
+      'description' => 'Bad request',
+      'schema' => [
+        'type' => 'object',
+        'properties' => [
+          'error' => [
+            'type' => 'string',
+            'example' => 'Bad data',
+          ],
+        ],
+      ],
+    ];
+    $responses['500'] = [
+      'description' => 'Internal server error.',
+      'schema' => [
+        'type' => 'object',
+        'properties' => [
+          'message' => [
+            'type' => 'string',
+            'example' => 'Internal server error.',
+          ],
+        ],
+      ],
+    ];
+    return $responses;
+  }
+
+  /**
+   * Get tags.
+   */
+  protected function getTags() {
+    $entity_types = $this->getRestEnabledEntityTypes();
+    $tags = [];
+    foreach ($entity_types as $entity_type) {
+      $tag = [
+        'name' => $entity_type->id(),
+        'description' => $this->t("Entity type: @label", ['@label' => $entity_type->getLabel()]),
+        'x-entity-type' => $entity_type->id(),
+      ];
+      $tags[] = $tag;
+    }
+    return $tags;
+  }
+
+  /**
+   * Fix default field value as zero instead of FALSE.
+   *
+   * @param $value
+   *  JSON Schema field value.
+   */
+  protected function fixDefaultFalse(&$value) {
+    if (isset($value['type']) && $value['type'] == 'array'
+      && is_array($value['items']['properties'])
+    ) {
+      foreach ($value['items']['properties'] as $property_key => $property) {
+        if ($property['type'] == 'boolean') {
+          if (isset($value['default'][0][$property_key]) && empty($value['default'][0][$property_key])) {
+            $value['default'][0][$property_key] = FALSE;
+          }
+        }
+      }
+    }
   }
 
 }
