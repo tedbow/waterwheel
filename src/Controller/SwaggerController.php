@@ -574,7 +574,9 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       if (!$bundle_name) {
         // Add discriminator field.
         $entity_type = $this->entityTypeManager()->getDefinition($entity_type_id);
-        $json_schema['discriminator'] = $entity_type->getKey('bundle');
+        if ($bundle_field = $entity_type->getKey('bundle')) {
+          $json_schema['discriminator'] = $entity_type->getKey('bundle');
+        }
       }
     }
     else {
