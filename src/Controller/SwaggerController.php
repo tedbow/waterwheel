@@ -2,11 +2,13 @@
 
 namespace Drupal\waterwheel\Controller;
 
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\rest\Plugin\rest\resource\EntityResource;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\RestResourceConfigInterface;
@@ -181,7 +183,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
 
           if ($this->isEntityResource($resource_config)) {
             $entity_type = $this->getEntityType($resource_config);
-            $path_method_spec['tags'] = $this->getBundleTags($entity_type);
+            $path_method_spec['tags'] = [$entity_type->id()];
             $path_method_spec['summary'] = $this->t('@method a @entity_type', [
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
@@ -229,13 +231,25 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     $parameters = [];
     if (in_array($method, ['GET', 'DELETE', 'PATCH'])) {
       $keys = $entity_type->getKeys();
-      $key_field = $this->fieldManager->getFieldStorageDefinitions($entity_type->id())[$keys['id']];
+      if ($entity_type instanceof ConfigEntityTypeInterface) {
+        $key_type = 'string';
+      }
+      else {
+        if ($entity_type instanceof FieldableEntityInterface) {
+          $key_field = $this->fieldManager->getFieldStorageDefinitions($entity_type->id())[$keys['id']];
+          $key_type = $key_field->getType();
+        }
+        else {
+          $key_type = 'string';
+        }
+
+      }
 
       $parameters[] = [
         'name' => $entity_type->id(),
         'in' => 'path',
         'required' => TRUE,
-        'type' => $key_field->getType(),
+        'type' => $key_type,
         'description' => $this->t('The @id,id, of the @type.', [
           '@id' => $keys['id'],
           '@type' => $entity_type->id(),
@@ -303,7 +317,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       $routes = $routing_provider->getRoutesByNames([$route_name]);
       if (empty($routes)) {
         $formats = $resource_config->getFormats($method);
-        if (count($formats) > 1) {
+        if (count($formats) > 0) {
           $route_name .= ".{$formats[0]}";
           $routes = $routing_provider->getRoutesByNames([$route_name]);
         }
@@ -382,37 +396,38 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @return array
    *   The model definitions.
    */
-  private function getDefinitions($entity_type_id = NULL, $bundle_name = NULL) {
+  protected function getDefinitions($entity_type_id = NULL, $bundle_name = NULL) {
     $entity_types = $this->getRestEnabledEntityTypes($entity_type_id);
     $definitions = [];
     foreach ($entity_types as $entity_id => $entity_type) {
       $entity_schema = $this->getJsonSchema($entity_id);
       $definitions[$entity_id] = $entity_schema;
-      $bundle_type = $entity_type->getBundleEntityType();
-      $bundle_storage = $this->entityTypeManager()->getStorage($bundle_type);
-      if ($bundle_name) {
-        $bundles[$bundle_name] = $bundle_storage->load($bundle_name);
-      }
-      else {
-        $bundles = $bundle_storage->loadMultiple();
-      }
-      foreach ($bundles as $bundle_name => $bundle) {
-        $bundle_schema = $this->getJsonSchema($entity_id, $bundle_name);
-        foreach ($entity_schema['properties'] as $property_id => $property) {
+      if ($bundle_type = $entity_type->getBundleEntityType()) {
+        $bundle_storage = $this->entityTypeManager()->getStorage($bundle_type);
+        if ($bundle_name) {
+          $bundles[$bundle_name] = $bundle_storage->load($bundle_name);
+        }
+        else {
+          $bundles = $bundle_storage->loadMultiple();
+        }
+        foreach ($bundles as $bundle_name => $bundle) {
+          $bundle_schema = $this->getJsonSchema($entity_id, $bundle_name);
+          foreach ($entity_schema['properties'] as $property_id => $property) {
+
+          }
+          // Use Open API polymorphism support to show that bundles extend entity type.
+          // Should base fields be removed from bundle schema.
+          // Can base fields could be different from entity type base fields?
+          // @see hook_entity_bundle_field_info().
+          // @see https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#models-with-polymorphism-support
+          $definitions[$this->getEntityDefinitionKey($entity_type, $bundle_name)] = [
+            'allOf' => [
+              ['$ref' => "#/definitions/$entity_id"],
+              $bundle_schema,
+            ],
+          ];
 
         }
-        // Use Open API polymorphism support to show that bundles extend entity type.
-        // Should base fields be removed from bundle schema.
-        // Can base fields could be different from entity type base fields?
-        // @see hook_entity_bundle_field_info().
-        // @see https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#models-with-polymorphism-support
-        $definitions[$this->getEntityDefinitionKey($entity_type, $bundle_name)] = [
-          'allOf' => [
-            ['$ref' => "#/definitions/$entity_id"],
-            $bundle_schema,
-          ],
-        ];
-
       }
     }
     return $definitions;
@@ -485,7 +500,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @return array
    *   The cleaned JSON Schema elements.
    */
-  private function cleanSchema($json_schema) {
+  protected function cleanSchema($json_schema) {
     foreach ($json_schema as $key => &$value) {
       if ($value === NULL) {
         $value = '';
@@ -552,16 +567,24 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *   The JSON schema.
    */
   protected function getJsonSchema($entity_type_id, $bundle_name = NULL) {
-    $schema = $this->schemaFactory->create($entity_type_id, $bundle_name);
-
-    $json_schema = $this->serializer->normalize($schema, 'json_schema');
-    unset($json_schema['$schema'], $json_schema['id']);
-    $json_schema = $this->cleanSchema($json_schema);
-    if (!$bundle_name) {
-      // Add discriminator field.
-      $entity_type = $this->entityTypeManager()->getDefinition($entity_type_id);
-      $json_schema['discriminator'] = $entity_type->getKey('bundle');
+    if ($schema = $this->schemaFactory->create($entity_type_id, $bundle_name)) {
+      $json_schema = $this->serializer->normalize($schema, 'json_schema');
+      unset($json_schema['$schema'], $json_schema['id']);
+      $json_schema = $this->cleanSchema($json_schema);
+      if (!$bundle_name) {
+        // Add discriminator field.
+        $entity_type = $this->entityTypeManager()->getDefinition($entity_type_id);
+        $json_schema['discriminator'] = $entity_type->getKey('bundle');
+      }
     }
+    else {
+      $json_schema = [
+        'type' => 'object',
+        'title' => $this->t('@entity_type Schema', ['@entity_type' => $entity_type_id]),
+        'description' => $this->t('Describes the payload for @entity_type entities.', ['@entity_type' => $entity_type_id]),
+      ];
+    }
+
     return $json_schema;
   }
 
@@ -618,7 +641,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *
    * @return array
    */
-  private function getEntityResponses(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
+  protected function getEntityResponses(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
     $responses = [];
     $definition_ref = '#/definitions/' . $this->getEntityDefinitionKey($entity_type, $bundle_name);
     switch ($method) {
