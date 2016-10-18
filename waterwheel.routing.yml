@@ -10,7 +10,7 @@ waterwheel.swagger.entities:
 waterwheel.swagger.non_entity:
   path: '/water-wheel/swagger/non-entity'
   defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerController::nonEntityResourcesJson'
+    _controller: '\Drupal\waterwheel\Controller\SwaggerController::nonBundleResourcesJson'
   methods: [GET]
   requirements:
     _access: 'TRUE'
@@ -49,3 +49,14 @@ waterwheel.swaggerUI.bundle:
   methods: [GET]
   requirements:
     _access: 'TRUE'
+
+
+waterwheel.swaggerUI.list:
+  path: '/water-wheel/swagger-ui/list-resources'
+  defaults:
+    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::listResources'
+    _title: 'REST API'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+
