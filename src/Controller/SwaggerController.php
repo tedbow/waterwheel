@@ -424,7 +424,10 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         foreach ($bundles as $bundle_name => $bundle) {
           $bundle_schema = $this->getJsonSchema($entity_id, $bundle_name);
           foreach ($entity_schema['properties'] as $property_id => $property) {
-
+            if (isset($bundle_schema['properties'][$property_id]) && $bundle_schema['properties'][$property_id] === $property) {
+              // Remove any bundle schema property that is the same as the entity schema property.
+              unset($bundle_schema['properties'][$property_id]);
+            }
           }
           // Use Open API polymorphism support to show that bundles extend entity type.
           // Should base fields be removed from bundle schema.
