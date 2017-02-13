@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\schemata\Schema;
+namespace Drupal\waterwheel_json_schema\Schema;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Entity\TypedData\EntityDataDefinitionInterface;
