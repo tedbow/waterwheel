@@ -324,7 +324,6 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    */
   protected function getRouteForResourceMethod(RestResourceConfigInterface $resource_config, $method) {
     if ($this->isEntityResource($resource_config)) {
-
       $route_name = 'rest.' . $resource_config->id() . ".$method";
 
       $routes = $this->routingProvider->getRoutesByNames([$route_name]);
@@ -348,7 +347,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
         }
       };
     }
-    throw new \Exception("No route found for REST resource: " . $resource_config->id());
+    throw new \Exception("No route found for REST resource, {$resource_config->id()}, for method $method");
   }
 
   /**
