@@ -25,29 +25,3 @@ waterwheel.swagger.bundle:
     _permission: 'access waterwheel api docs'
     _format: 'json'
 
-waterwheel.swaggerUI.non_entity:
-  path: '/water-wheel/swagger-ui/non-entity'
-  defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::nonEntityResources'
-  methods: [GET]
-  requirements:
-    _permission: 'access waterwheel api docs'
-
-waterwheel.swaggerUI.bundle:
-  path: '/water-wheel/swagger-ui/{entity_type}/{bundle_name}'
-  defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::bundleResource'
-  methods: [GET]
-  requirements:
-    _permission: 'access waterwheel api docs'
-
-
-waterwheel.swaggerUI.list:
-  path: '/water-wheel/swagger-ui/list-resources'
-  defaults:
-    _controller: '\Drupal\waterwheel\Controller\SwaggerUIController::listResources'
-    _title: 'REST API'
-  methods: [GET]
-  requirements:
-    _permission: 'access waterwheel api docs'
-

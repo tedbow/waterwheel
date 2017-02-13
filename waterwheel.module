@@ -15,14 +15,3 @@ function waterwheel_help($path, $arg) {
       break;
   }
 }
-
-/**
- * Implements hook_theme().
- */
-function waterwheel_theme() {
-  return array(
-    'swagger_ui' => array(
-      'render element' => 'elements',
-    ),
-  );
-}
