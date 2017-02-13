@@ -1,3 +1,9 @@
+#IMPORTANT
+The waterwheel_json_schema module is copied for the Schemata project.
+It is only intended to be needed until there is stable version of the Schemata
+module(or another module that provides json_schema). 
+The original Schemata README follows:
+
 # Schemata
 
 > Facilitate generation of schema definitions of Drupal 8 data models.
@@ -52,7 +58,7 @@ be requested via a GET request using a `_format` parameter to select a
 particular serializer.
 
 In order to serialize the Schema Object, the serializer must be able to support
-implementations of the Drupal\waterwheel_json_schema\Schema\SchemaInterface class. At this
+implementations of the Drupal\schemata\Schema\SchemaInterface class. At this
 time, the only serializer support for Schemata is within this project, you can
 see an example of this in the packaged submodule **JSON Schema**.
 
