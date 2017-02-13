@@ -100,9 +100,9 @@ class SwaggerUIController extends ControllerBase {
     $return['direct_download'] = [
       '#type' => 'markup',
       '#markup' => '<h2>' . $this->t('Open API files') . '</h2>' .
-        // @todo Which page should the docs link to?
-        '<p>' . $this->t('The following links provide the REST API resources documented in <a href=":open_api_spec">Open API(fka Swagger)</a> format.', [':open_api_spec' => 'https://github.com/OAI/OpenAPI-Specification/tree/OpenAPI.next']) . ' ' .
-        $this->t('This JSON file can be used in tools such as the <a href=":swagger_editor">Swagger Editor</a> to provide a more detailed version of the API documentation.', [':swagger_editor' => 'http://editor.swagger.io/#/']) . '</p>',
+      // @todo Which page should the docs link to?
+      '<p>' . $this->t('The following links provide the REST API resources documented in <a href=":open_api_spec">Open API(fka Swagger)</a> format.', [':open_api_spec' => 'https://github.com/OAI/OpenAPI-Specification/tree/OpenAPI.next']) . ' ' .
+      $this->t('This JSON file can be used in tools such as the <a href=":swagger_editor">Swagger Editor</a> to provide a more detailed version of the API documentation.', [':swagger_editor' => 'http://editor.swagger.io/#/']) . '</p>',
     ];
     $open_api_links['entities'] = [
       'url' => Url::fromRoute('waterwheel.swagger.entities', [], ['query' => ['_format' => 'json']]),

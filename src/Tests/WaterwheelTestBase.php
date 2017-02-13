@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Drupal\waterwheel\Tests;
 
 use Drupal\Component\Serialization\Json;
@@ -10,6 +9,9 @@ use Drupal\serialization\Encoder\JsonEncoder;
 use GuzzleHttp\Cookie\CookieJar;
 use Symfony\Component\Serializer\Serializer;
 
+/**
+ * Base class for Waterwheel tests.
+ */
 abstract class WaterwheelTestBase extends RESTTestBase {
 
   /**

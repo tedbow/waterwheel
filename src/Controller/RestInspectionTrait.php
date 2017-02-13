@@ -1,15 +1,18 @@
 <?php
 
-
 namespace Drupal\waterwheel\Controller;
-
 
 use Drupal\rest\Plugin\rest\resource\EntityResource;
 use Drupal\rest\RestResourceConfigInterface;
 
+/**
+ * Common functions for inspecting REST resources.
+ */
 trait RestInspectionTrait {
 
   /**
+   * The entity type manager.
+   *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface;
    */
   protected $entityTypeManager;

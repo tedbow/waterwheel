@@ -640,8 +640,8 @@ class OpenAPIResourceTest extends WaterwheelTestBase {
                 ],
             ],
         ],
-      'host' => 'www.octo2.dev',
-      'basePath' => '/d8_2_waterwheel',
+      'host' => \Drupal::request()->getHost(),
+      'basePath' => \Drupal::request()->getBasePath(),
       'securityDefinitions' =>
         [
           'csrf_token' =>
@@ -2128,8 +2128,8 @@ class OpenAPIResourceTest extends WaterwheelTestBase {
                 ],
             ],
         ],
-      'host' => 'www.octo2.dev',
-      'basePath' => '/d8_2_waterwheel',
+      'host' => \Drupal::request()->getHost(),
+      'basePath' => \Drupal::request()->getBasePath(),
       'securityDefinitions' =>
         [
           'csrf_token' =>
