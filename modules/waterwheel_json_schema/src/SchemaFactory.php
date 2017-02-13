@@ -72,7 +72,7 @@ class SchemaFactory {
    *   URL input specifying an entity bundle to be processed. May be NULL
    *   for support of entities that do not have bundles.
    *
-   * @return \Drupal\schemata\Schema\Schema
+   * @return \Drupal\waterwheel_json_schema\Schema\Schema
    *   A Schema object which can be processed as a Rest Resource response.
    *   This will likely be converted into an interface or base class here.
    */
@@ -105,10 +105,10 @@ class SchemaFactory {
     }
 
     if ($entity_type == 'node' && !empty($bundle)) {
-      $class = '\Drupal\schemata\Schema\NodeSchema';
+      $class = '\Drupal\waterwheel_json_schema\Schema\NodeSchema';
     }
     else {
-      $class = '\Drupal\schemata\Schema\Schema';
+      $class = '\Drupal\waterwheel_json_schema\Schema\Schema';
     }
 
     $schema = new $class(
