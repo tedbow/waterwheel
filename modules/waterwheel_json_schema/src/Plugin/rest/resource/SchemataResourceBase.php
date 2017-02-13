@@ -40,7 +40,7 @@ class SchemataResourceBase extends ResourceBase {
   /**
    * The Schemata SchemaFactory.
    *
-   * @var \Drupal\schemata\SchemaFactory
+   * @var \Drupal\waterwheel_json_schema\SchemaFactory
    */
   protected $schemaFactory;
 
@@ -66,7 +66,7 @@ class SchemataResourceBase extends ResourceBase {
    *   The EntityTypeManager.
    * @param \Drupal\Core\Entity\EntityTypeBundleInfo $entity_type_bundle_info
    *   The EntityTypeBundleInfo helper.
-   * @param \Drupal\schemata\SchemaFactory $schema_factory
+   * @param \Drupal\waterwheel_json_schema\SchemaFactory $schema_factory
    *   The Schemata Schema Loader.
    * @param \Psr\Log\LoggerInterface $logger
    *   A logger instance.

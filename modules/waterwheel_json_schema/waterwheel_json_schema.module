@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains schemata.module.
+ * Contains waterwheel_json_schema.module.
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;

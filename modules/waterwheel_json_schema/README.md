@@ -52,7 +52,7 @@ be requested via a GET request using a `_format` parameter to select a
 particular serializer.
 
 In order to serialize the Schema Object, the serializer must be able to support
-implementations of the Drupal\schemata\Schema\SchemaInterface class. At this
+implementations of the Drupal\waterwheel_json_schema\Schema\SchemaInterface class. At this
 time, the only serializer support for Schemata is within this project, you can
 see an example of this in the packaged submodule **JSON Schema**.
 

@@ -23,8 +23,7 @@ class OpenAPIResourceTest extends WaterwheelTestBase {
     'serialization',
     'rest',
     'waterwheel',
-    'schemata',
-    'json_schema',
+    'waterwheel_json_schema',
   ];
 
   /**

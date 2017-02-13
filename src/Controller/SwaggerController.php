@@ -12,7 +12,7 @@ use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\rest\Plugin\Type\ResourcePluginManager;
 use Drupal\rest\RestResourceConfigInterface;
-use Drupal\schemata\SchemaFactory;
+use Drupal\waterwheel_json_schema\SchemaFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Route;
@@ -87,7 +87,7 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
       $container->get('plugin.manager.rest'),
       $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
-      $container->get('schemata.schema_factory'),
+      $container->get('waterwheel_json_schema.schema_factory'),
       $container->get('serializer'),
       $container->get('router.route_provider')
     );
