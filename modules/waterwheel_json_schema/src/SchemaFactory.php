@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\schemata;
+namespace Drupal\waterwheel_json_schema;
 
 use Psr\Log\LoggerInterface;
 use Drupal\Core\Entity\EntityTypeManager;

@@ -4,19 +4,19 @@ services:
   # the SchemaFactory can be pulled in to custom menu routes, drush commands,
   # and REST plugins. The SchemaFactory::create() creates instances of
   # Drupal\schemata\Schema\SchemaInterface.
-  schemata.schema_factory:
+  waterwheel_json_schema.schema_factory:
     class: Drupal\schemata\SchemaFactory
     arguments: ['@logger.channel.schemata', '@entity_type.manager', '@entity_type.bundle.info', '@typed_data_manager']
 
   # Factory wrapper to generate URLs for Schemas. This has static methods and
   # can be directly included in any code without dependency injection, much like
   # Drupal\Core\Url.
-  schemata.schema_url:
+  waterwheel_json_schema.schema_url:
     class: Drupal\schemata\SchemaUrl
 
   # Create a log channel for the Schemata module. This simplifies logging setup
   # code in Schemata code that will do logging. As a tradeoff, it also adds this
   # fairly specific logging channel to the system for all requests.
-  logger.channel.schemata:
+  logger.channel.waterwheel_json_schema:
     parent: logger.channel_base
     arguments: ['schemata']

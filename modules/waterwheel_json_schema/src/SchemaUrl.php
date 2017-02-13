@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\schemata;
+namespace Drupal\waterwheel_json_schema;
 
-use Drupal\schemata\schema\SchemaInterface;
+use Drupal\waterwheel_json_schema\schema\SchemaInterface;
 use Drupal\Core\Url;
 
 /**

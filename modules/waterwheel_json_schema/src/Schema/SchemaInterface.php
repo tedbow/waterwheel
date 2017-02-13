@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\schemata\Schema;
+namespace Drupal\waterwheel_json_schema\Schema;
 
 /**
  * Requirements for a Schema to interact with Schema utilities and serializers.

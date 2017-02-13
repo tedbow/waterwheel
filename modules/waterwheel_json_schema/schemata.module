@@ -10,7 +10,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 /**
  * Implements hook_help().
  */
-function schemata_help($route_name, RouteMatchInterface $route_match) {
+function waterwheel_json_schema_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     // Main module help for the json_schema module.
     case 'help.page.schemata':

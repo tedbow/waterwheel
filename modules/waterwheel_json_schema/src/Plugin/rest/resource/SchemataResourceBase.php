@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\schemata\Plugin\rest\resource;
+namespace Drupal\waterwheel_json_schema\Plugin\rest\resource;
 
-use Drupal\schemata\SchemaFactory;
+use Drupal\waterwheel_json_schema\SchemaFactory;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
 use Drupal\rest\ResourceResponse;

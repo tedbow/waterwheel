@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\schemata\Plugin\rest\resource;
+namespace Drupal\waterwheel_json_schema\Plugin\rest\resource;
 
 /**
  * Provides a resource to get view modes by entity and bundle.
