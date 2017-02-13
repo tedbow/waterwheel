@@ -1,10 +1,11 @@
 <?php
 
-namespace Drupal\waterwheel\Controller;
+namespace Drupal\waterwheel_docs\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Url;
+use Drupal\waterwheel\Controller\RestInspectionTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -148,8 +149,8 @@ class SwaggerUIController extends ControllerBase {
       '#theme' => 'swagger_ui',
       '#attached' => [
         'library' => [
-          'waterwheel/swagger_ui_integration',
-          'waterwheel/swagger_ui',
+          'waterwheel_docs/swagger_ui_integration',
+          'waterwheel_docs/swagger_ui',
         ],
         'drupalSettings' => [
           'waterwheel' => [
