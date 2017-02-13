@@ -10,4 +10,3 @@ function waterwheel_docs_theme() {
     ),
   );
 }
-

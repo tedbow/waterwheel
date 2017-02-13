@@ -2,7 +2,6 @@
 
 namespace Drupal\waterwheel\Tests;
 
-use Drupal\Component\Serialization\Json;
 use Drupal\Core\Url;
 
 /**

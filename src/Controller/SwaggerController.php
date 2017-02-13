@@ -51,7 +51,10 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * @var \Symfony\Component\Serializer\SerializerInterface
    */
   protected $serializer;
+
   /**
+   * The route provider.
+   *
    * @var \Drupal\Core\Routing\RouteProviderInterface
    */
   protected $routingProvider;
@@ -65,10 +68,12 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    *   The entity type manager.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
    *   The field manager.
-   * @param \Drupal\schemata\SchemaFactory $schema_factory
+   * @param \Drupal\waterwheel_json_schema\SchemaFactory $schema_factory
    *   The schema factory.
    * @param \Symfony\Component\Serializer\Serializer $serializer
    *   The serializer.
+   * @param \Drupal\Core\Routing\RouteProviderInterface $routing_provider
+   *   The route provider.
    */
   public function __construct(ResourcePluginManager $manager, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, SchemaFactory $schema_factory, Serializer $serializer, RouteProviderInterface $routing_provider) {
     $this->manager = $manager;
@@ -156,8 +161,9 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Returns the paths information.
    *
    * @param \Drupal\rest\RestResourceConfigInterface[] $resource_configs
-   *
+   *   The REST config resources.
    * @param string $bundle_name
+   *   The bundle name.
    *
    * @return array The info elements.
    *    The info elements.
@@ -195,10 +201,10 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
               '@method' => ucfirst($swagger_method),
               '@entity_type' => $entity_type->getLabel(),
             ]);
-            foreach ($formats as $format) {
-              //$path_method_spec['consumes'][] = "$format";
-              //$path_method_spec['produces'][] = "$format";
-            }
+            /*foreach ($formats as $format) {
+              $path_method_spec['consumes'][] = "$format";
+              $path_method_spec['produces'][] = "$format";
+            }*/
 
             $path_method_spec['parameters'] = array_merge($path_method_spec['parameters'], $this->getEntityParameters($entity_type, $method, $bundle_name));
             $path_method_spec['responses'] = $this->getEntityResponses($entity_type, $method, $bundle_name) + $path_method_spec['responses'];
@@ -424,13 +430,15 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
           $bundle_schema = $this->getJsonSchema($entity_id, $bundle_name);
           foreach ($entity_schema['properties'] as $property_id => $property) {
             if (isset($bundle_schema['properties'][$property_id]) && $bundle_schema['properties'][$property_id] === $property) {
-              // Remove any bundle schema property that is the same as the entity schema property.
+              // Remove any bundle schema property that is the same as the
+              // entity schema property.
               unset($bundle_schema['properties'][$property_id]);
             }
           }
-          // Use Open API polymorphism support to show that bundles extend entity type.
-          // Should base fields be removed from bundle schema.
-          // Can base fields could be different from entity type base fields?
+          // Use Open API polymorphism support to show that bundles extend
+          // entity type.
+          // @todo Should base fields be removed from bundle schema?
+          // @todo Can base fields could be different from entity type base fields?
           // @see hook_entity_bundle_field_info().
           // @see https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#models-with-polymorphism-support
           $definitions[$this->getEntityDefinitionKey($entity_type, $bundle_name)] = [
@@ -446,12 +454,11 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return $definitions;
   }
 
-
-
   /**
    * Return resources for non-entity resources.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   A json response.
    */
   public function nonBundleResourcesJson() {
     /** @var \Drupal\rest\Entity\RestResourceConfig[] $resource_configs */
@@ -557,15 +564,16 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
     return $json_schema;
   }
 
-
-
   /**
    * Get the Open API specification array.
    *
    * @param \Drupal\rest\RestResourceConfigInterface[] $rest_configs
+   *   The REST config resources.
    * @param string $bundle_name
+   *   The bundle name.
    *
    * @return array
+   *   The OpenAPI specification.
    */
   protected function getSpecification(array $rest_configs, $bundle_name = NULL) {
     $spec = [
@@ -585,10 +593,14 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Get possible responses for an entity type.
    *
    * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *   The entity type.
    * @param string $method
+   *   The method.
    * @param string $bundle_name
+   *   The bundle name.
    *
    * @return array
+   *   The entity responses.
    */
   protected function getEntityResponses(EntityTypeInterface $entity_type, $method, $bundle_name = NULL) {
     $responses = [];
@@ -627,9 +639,13 @@ class SwaggerController extends ControllerBase implements ContainerInjectionInte
    * Gets the entity definition key.
    *
    * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
-   * @param $bundle_name
+   *   The entity type.
+   * @param string $bundle_name
+   *   The bundle name.
    *
    * @return string
+   *   The entity definition key. Either [entity_type] or
+   *   [entity_type]:[bundle_name]
    */
   protected function getEntityDefinitionKey(EntityTypeInterface $entity_type, $bundle_name) {
     $definition_key = $entity_type->id();
