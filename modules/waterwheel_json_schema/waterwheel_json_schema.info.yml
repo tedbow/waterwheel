@@ -1,4 +1,4 @@
-name: Schemata
+name: Waterwheel JSON Schema
 type: module
 description: Provide schema definitions of Drupal entities for type validation, code generation, and documentation.
 core: 8.x
